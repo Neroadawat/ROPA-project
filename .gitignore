@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.vscode/
+.idea/
+.kiro/
+.cursor/
+.copilot/
+.github/copilot/
+.aider*
+.continue/
+.codeium/
+.tabnine/
+.windsurf/
+*.code-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+.nox/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Logs
+*.log
+logs/
+
+# Node (frontend)
+node_modules/
+.next/
+out/
+.vercel
+
+# Misc
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
