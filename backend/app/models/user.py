@@ -21,3 +21,5 @@ class User(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     department = relationship("Department", back_populates="users")
+    created_ropa_records = relationship("RopaRecord", foreign_keys="[RopaRecord.created_by]", back_populates="creator")
+    approved_ropa_records = relationship("RopaRecord", foreign_keys="[RopaRecord.approved_by]", back_populates="approver")

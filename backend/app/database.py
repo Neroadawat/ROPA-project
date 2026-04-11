@@ -21,5 +21,5 @@ def get_db():
 
 def create_tables():
     """สร้างตารางทั้งหมดใน database (ใช้แทน Alembic)"""
-    from app.models import *  # noqa: F401, F403
+    import app.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
