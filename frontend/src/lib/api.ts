@@ -629,15 +629,54 @@ export interface RetentionAlertData {
 }
 
 // ─── Dashboard ───
+export interface DashboardSummary {
+  total: number;
+  by_department: { department: string; count: number }[];
+  by_risk_level: { risk_level: string; count: number }[];
+  by_legal_basis: { legal_basis: string; count: number }[];
+}
+
+export interface DashboardCompleteness {
+  average_completeness_pct: number;
+  records: { record_id: number; activity_name: string | null; filled: number; total: number; completeness_pct: number }[];
+}
+
+export interface DashboardTrends {
+  monthly_trends: { year: number; month: number; count: number }[];
+}
+
+export interface DashboardRiskHeatmap {
+  heatmap: { department: string; data_type: string; risk_level: string; count: number }[];
+}
+
+export interface DashboardComplianceScores {
+  scores: { department_id: number; department: string; record_count: number; completeness_pct: number; legal_basis_coverage_pct: number; compliance_score: number }[];
+}
+
+export interface DashboardStatusOverview {
+  statuses: Record<string, number>;
+}
+
+export interface DashboardSensitiveDataMapping {
+  mapping: { department: string; sensitive_data_count: number }[];
+}
+
+export interface DashboardRetentionAlertsSummary {
+  overdue: number;
+  within_30: number;
+  within_60_90: number;
+  review_overdue: number;
+}
+
 export const dashboardApi = {
-  summary: () => request<Record<string, unknown>>("/api/dashboard/summary"),
-  completeness: () => request<Record<string, unknown>>("/api/dashboard/completeness"),
-  trends: () => request<Record<string, unknown>>("/api/dashboard/trends"),
-  riskHeatmap: () => request<Record<string, unknown>>("/api/dashboard/risk-heatmap"),
-  complianceScores: () => request<Record<string, unknown>>("/api/dashboard/compliance-scores"),
-  statusOverview: () => request<Record<string, unknown>>("/api/dashboard/status-overview"),
-  sensitiveDataMapping: () => request<Record<string, unknown>>("/api/dashboard/sensitive-data-mapping"),
-  retentionAlerts: () => request<Record<string, unknown>>("/api/dashboard/retention-alerts"),
+  summary: () => request<DashboardSummary>("/api/dashboard/summary"),
+  completeness: () => request<DashboardCompleteness>("/api/dashboard/completeness"),
+  trends: () => request<DashboardTrends>("/api/dashboard/trends"),
+  riskHeatmap: () => request<DashboardRiskHeatmap>("/api/dashboard/risk-heatmap"),
+  complianceScores: () => request<DashboardComplianceScores>("/api/dashboard/compliance-scores"),
+  statusOverview: () => request<DashboardStatusOverview>("/api/dashboard/status-overview"),
+  sensitiveDataMapping: () => request<DashboardSensitiveDataMapping>("/api/dashboard/sensitive-data-mapping"),
+  retentionAlerts: () => request<DashboardRetentionAlertsSummary>("/api/dashboard/retention-alerts"),
 };
 
 // ─── Suggestions ───
