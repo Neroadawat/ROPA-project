@@ -17,9 +17,9 @@ from app.schemas.ropa_record import RopaRecordCreate, RopaRecordUpdate
 from app.services.audit_service import log_action
 
 
-# ---------------------------------------------------------------------------
+
 # Internal helpers
-# ---------------------------------------------------------------------------
+
 
 _RECORD_FIELDS = [
     "department_id", "role_type", "controller_id", "processor_id",
@@ -316,3 +316,108 @@ def list_ropa_records(
         "per_page": per_page,
         "pages": pages,
     }
+
+
+
+# DPO Approval Workflow
+
+
+_PENDING_STATUSES = ("pending_approval", "pending_edit_approval", "pending_delete_approval")
+
+
+def list_pending_records(
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+) -> dict:
+    """List ROPA records awaiting DPO approval."""
+    query = (
+        _base_query(db)
+        .filter(
+            RopaRecord.is_deleted == False,
+            RopaRecord.status.in_(_PENDING_STATUSES),
+        )
+        .order_by(RopaRecord.created_at.desc())
+    )
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    pages = ceil(total / per_page) if per_page else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
+
+
+def approve_ropa_record(db: Session, record_id: int, user: User) -> RopaRecord:
+    """DPO approves a pending ROPA record.
+
+    - pending_approval / pending_edit_approval → approved
+    - pending_delete_approval → approved + soft delete
+    """
+    record = _base_query(db).filter(RopaRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ไม่พบ ROPA Record")
+
+    if record.status not in _PENDING_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"ไม่สามารถอนุมัติ ROPA Record ที่มีสถานะ '{record.status}' ได้",
+        )
+
+    was_pending_delete = record.status == "pending_delete_approval"
+
+    record.status = "approved"
+    record.approved_by = user.id
+    record.approved_at = datetime.now()
+    record.rejection_reason = None  # clear any previous rejection
+
+    if was_pending_delete:
+        record.is_deleted = True
+
+    db.flush()
+
+    action_label = "approve_delete" if was_pending_delete else "approve"
+    log_action(
+        db,
+        user_id=user.id,
+        action=action_label,
+        table_name="ropa_records",
+        record_id=record.id,
+        new_value=_record_snapshot(record),
+    )
+    db.refresh(record)
+    return record
+
+
+def reject_ropa_record(db: Session, record_id: int, rejection_reason: str, user: User) -> RopaRecord:
+    """DPO rejects a pending ROPA record with a reason."""
+    record = _base_query(db).filter(RopaRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ไม่พบ ROPA Record")
+
+    if record.status not in _PENDING_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"ไม่สามารถปฏิเสธ ROPA Record ที่มีสถานะ '{record.status}' ได้",
+        )
+
+    record.status = "rejected"
+    record.rejection_reason = rejection_reason
+
+    db.flush()
+
+    log_action(
+        db,
+        user_id=user.id,
+        action="reject",
+        table_name="ropa_records",
+        record_id=record.id,
+        new_value={"rejection_reason": rejection_reason},
+    )
+    db.refresh(record)
+    return record
