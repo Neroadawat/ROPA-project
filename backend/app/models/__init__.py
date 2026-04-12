@@ -11,6 +11,7 @@ from app.models.ropa_data_subject import RopaDataSubject
 from app.models.ropa_personal_data_type import RopaPersonalDataType
 from app.models.import_batch import ImportBatch
 from app.models.ai_suggestion_log import AiSuggestionLog
+from app.models.record_version import RecordVersion
 
 __all__ = [
     "Department",
@@ -26,4 +27,5 @@ __all__ = [
     "RopaPersonalDataType",
     "ImportBatch",
     "AiSuggestionLog",
+    "RecordVersion",
 ]

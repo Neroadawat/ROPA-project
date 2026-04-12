@@ -23,3 +23,4 @@ class User(Base):
     department = relationship("Department", back_populates="users")
     created_ropa_records = relationship("RopaRecord", foreign_keys="[RopaRecord.created_by]", back_populates="creator")
     approved_ropa_records = relationship("RopaRecord", foreign_keys="[RopaRecord.approved_by]", back_populates="approver")
+    record_versions = relationship("RecordVersion", back_populates="changer")

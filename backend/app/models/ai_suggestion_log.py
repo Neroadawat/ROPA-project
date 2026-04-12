@@ -18,5 +18,5 @@ class AiSuggestionLog(Base):
     suggestions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     selected_legal_basis: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     accepted: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    model_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    engine_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
