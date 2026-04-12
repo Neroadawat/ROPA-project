@@ -18,6 +18,8 @@ import {
   KeyRound,
   LogOut,
   CheckCircle2,
+  Building,
+  Server,
 } from "lucide-react";
 
 interface NavItem {
@@ -52,6 +54,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "จัดการผู้ใช้", href: "/users", icon: Users, roles: ["Admin"] },
       { label: "จัดการแผนก", href: "/departments", icon: Building2, roles: ["Admin"] },
       { label: "ข้อมูลหลัก", href: "/master-data", icon: Database, roles: ["Admin"] },
+      { label: "Controllers", href: "/controllers", icon: Building, roles: ["Admin"] },
+      { label: "Processors", href: "/processors", icon: Server, roles: ["Admin"] },
       { label: "นำเข้า Excel", href: "/import", icon: Upload, roles: ["Admin"] },
     ],
   },
