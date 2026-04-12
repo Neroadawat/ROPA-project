@@ -26,7 +26,10 @@ interface DataTypeForm { name: string; category: string; sensitivity_level: stri
 const EMPTY_SUBJECT: SubjectForm = { name: "", description: "" };
 const EMPTY_DATATYPE: DataTypeForm = { name: "", category: "", sensitivity_level: "" };
 
-const SENSITIVITY_OPTIONS = ["ทั่วไป", "อ่อนไหว"];
+const SENSITIVITY_OPTIONS = [
+  { label: "ทั่วไป", value: "general" },
+  { label: "อ่อนไหว", value: "sensitive" }
+];
 
 export default function MasterDataPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("subjects");
@@ -169,7 +172,7 @@ export default function MasterDataPage() {
       </div>
     )},
     { key: "category", label: "หมวดหมู่", render: (item) => <span className="text-sm text-muted-foreground">{item.category || "-"}</span> },
-    { key: "sensitivity_level", label: "ระดับความอ่อนไหว", render: (item) => <span className="text-sm text-muted-foreground">{item.sensitivity_level || "-"}</span> },
+    { key: "sensitivity_level", label: "ระดับความอ่อนไหว", render: (item) => {const displayLabel = SENSITIVITY_OPTIONS.find(opt => opt.value === item.sensitivity_level)?.label || item.sensitivity_level || "-";return <span className="text-sm text-muted-foreground">{displayLabel}</span>;} },
     { key: "created_at", label: "สร้างเมื่อ", sortable: true, render: (item) => <span className="text-muted-foreground text-xs">{new Date(item.created_at).toLocaleDateString("th-TH")}</span> },
   ];
 
@@ -284,7 +287,11 @@ export default function MasterDataPage() {
             <Label htmlFor="dt-sensitivity">ระดับความอ่อนไหว</Label>
             <select id="dt-sensitivity" value={dataTypeForm.sensitivity_level} onChange={(e) => setDataTypeForm((f) => ({ ...f, sensitivity_level: e.target.value }))} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground">
               <option value="">-- เลือก --</option>
-              {SENSITIVITY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+              {SENSITIVITY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
