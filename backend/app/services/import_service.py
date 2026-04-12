@@ -26,7 +26,6 @@ PROCESSOR_INDICATORS = {"processor_name", "source_controller", "data_category"}
 
 # Column mapping: Excel header → model field
 COLUMN_MAP = {
-    "process_name": "process_name",
     "activity_name": "activity_name",
     "department": "department",
     "purpose": "purpose",
@@ -307,7 +306,6 @@ def _validate_row(
         processor_id=processor_id,
         data_subject_category_ids=ds_ids,
         personal_data_type_ids=pdt_ids,
-        process_name=_cell_str(row_data.get("process_name")),
         activity_name=activity_name,
         purpose=_cell_str(row_data.get("purpose")),
         risk_level=risk_level,
@@ -450,7 +448,6 @@ def confirm_import(
             status="pending_approval",
             controller_id=row.controller_id,
             processor_id=row.processor_id,
-            process_name=row.process_name,
             activity_name=row.activity_name,
             purpose=row.purpose,
             risk_level=row.risk_level,

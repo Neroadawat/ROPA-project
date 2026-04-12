@@ -71,7 +71,6 @@ class RopaRecordCreate(BaseModel):
     personal_data_type_ids: list[int] = []
 
     # Section 1: Activity & Purpose
-    process_name: Optional[str] = None
     activity_name: Optional[str] = None
     purpose: Optional[str] = None
     risk_level: Optional[str] = None  # "Low" | "Medium" | "High"
@@ -83,7 +82,6 @@ class RopaRecordCreate(BaseModel):
 
     # Section 3: Legal Basis
     legal_basis_thai: Optional[str] = None
-    legal_basis_gdpr: Optional[str] = None
     minor_consent_under_10: Optional[str] = None
     minor_consent_10_20: Optional[str] = None
 
@@ -134,7 +132,6 @@ class RopaRecordUpdate(BaseModel):
     personal_data_type_ids: Optional[list[int]] = None
 
     # Section 1: Activity & Purpose
-    process_name: Optional[str] = None
     activity_name: Optional[str] = None
     purpose: Optional[str] = None
     risk_level: Optional[str] = None
@@ -146,7 +143,6 @@ class RopaRecordUpdate(BaseModel):
 
     # Section 3: Legal Basis
     legal_basis_thai: Optional[str] = None
-    legal_basis_gdpr: Optional[str] = None
     minor_consent_under_10: Optional[str] = None
     minor_consent_10_20: Optional[str] = None
 
@@ -211,7 +207,6 @@ class RopaRecordResponse(BaseModel):
     personal_data_types: list[PersonalDataTypeBrief] = []
 
     # Section 1: Activity & Purpose
-    process_name: Optional[str] = None
     activity_name: Optional[str] = None
     purpose: Optional[str] = None
     risk_level: Optional[str] = None
@@ -223,7 +218,6 @@ class RopaRecordResponse(BaseModel):
 
     # Section 3: Legal Basis
     legal_basis_thai: Optional[str] = None
-    legal_basis_gdpr: Optional[str] = None
     minor_consent_under_10: Optional[str] = None
     minor_consent_10_20: Optional[str] = None
 
@@ -274,7 +268,6 @@ class RopaRecordListResponse(BaseModel):
     creator: UserBrief
     role_type: str
     status: str
-    process_name: Optional[str] = None
     activity_name: Optional[str] = None
     risk_level: Optional[str] = None
     legal_basis_thai: Optional[str] = None

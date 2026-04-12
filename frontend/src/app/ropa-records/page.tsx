@@ -125,10 +125,10 @@ export default function RopaRecordsPage() {
       render: (item) => <span className="text-muted-foreground">{item.id}</span>,
     },
     {
-      key: "process_name", label: "กิจกรรม", sortable: true,
+      key: "activity_name", label: "กิจกรรม", sortable: true,
       render: (item) => (
         <div>
-          <p className="font-medium text-foreground">{item.process_name || item.activity_name || "-"}</p>
+          <p className="font-medium text-foreground">{item.activity_name || "-"}</p>
           <p className="text-xs text-muted-foreground">{item.department.name}</p>
         </div>
       ),
@@ -205,7 +205,7 @@ export default function RopaRecordsPage() {
           columns={columns}
           data={records}
           searchPlaceholder="ค้นหาชื่อกิจกรรม..."
-          searchKeys={["process_name", "activity_name"]}
+          searchKeys={["activity_name"]}
           pageSize={perPage}
           emptyMessage="ไม่พบ ROPA Record"
           filters={
@@ -269,7 +269,7 @@ export default function RopaRecordsPage() {
           <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-2xl shadow-black/40 mx-4 bg-[#0f172a]/95 backdrop-blur-xl">
             <h3 className="text-base font-semibold text-foreground mb-2">ลบ ROPA Record</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              คุณต้องการลบ &quot;{deleteTarget.process_name || deleteTarget.activity_name || `Record #${deleteTarget.id}`}&quot; ใช่หรือไม่?
+              คุณต้องการลบ &quot;{deleteTarget.activity_name || `Record #${deleteTarget.id}`}&quot; ใช่หรือไม่?
             </p>
             <div className="mb-4">
               <label htmlFor="delete-reason" className="block text-sm font-medium text-foreground mb-1">เหตุผลในการลบ *</label>

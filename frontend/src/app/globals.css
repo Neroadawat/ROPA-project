@@ -118,3 +118,17 @@ select:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
+select option {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 8px 12px;
+}
+select option:hover,
+select option:checked {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

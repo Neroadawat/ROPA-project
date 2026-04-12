@@ -24,7 +24,6 @@ class ImportRowData(BaseModel):
     personal_data_type_ids: list[int] = []
 
     # Section 1
-    process_name: Optional[str] = None
     activity_name: Optional[str] = None
     purpose: Optional[str] = None
     risk_level: Optional[str] = None

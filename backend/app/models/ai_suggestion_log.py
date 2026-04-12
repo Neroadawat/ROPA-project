@@ -8,7 +8,7 @@ from app.database import Base
 
 
 class AiSuggestionLog(Base):
-    __tablename__ = "ai_suggestion_logs"
+    __tablename__ = "suggestion_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)

@@ -23,7 +23,7 @@ from app.services.audit_service import log_action
 
 _RECORD_FIELDS = [
     "department_id", "role_type", "controller_id", "processor_id",
-    "process_name", "activity_name", "purpose", "risk_level",
+    "activity_name", "purpose", "risk_level",
     "data_acquisition_method", "data_source_direct", "data_source_other",
     "legal_basis_thai", "legal_basis_gdpr",
     "minor_consent_under_10", "minor_consent_10_20",
@@ -109,7 +109,11 @@ def _base_query(db: Session):
 def _apply_dept_scope(query, user: User):
     """Auto-filter by department for Department_User role."""
     if user.role == "Department_User":
-        query = query.filter(RopaRecord.department_id == user.department_id)
+        if user.department_id is None:
+            # Department_User without a department should see nothing
+            query = query.filter(RopaRecord.id == -1)
+        else:
+            query = query.filter(RopaRecord.department_id == user.department_id)
     return query
 
 
@@ -247,7 +251,6 @@ _SORTABLE_COLUMNS = {
     "created_at": RopaRecord.created_at,
     "updated_at": RopaRecord.updated_at,
     "activity_name": RopaRecord.activity_name,
-    "process_name": RopaRecord.process_name,
     "risk_level": RopaRecord.risk_level,
     "status": RopaRecord.status,
 }
@@ -285,13 +288,12 @@ def list_ropa_records(
     if record_status:
         query = query.filter(RopaRecord.status == record_status)
 
-    # Search across activity_name, process_name, purpose
+    # Search across activity_name, purpose
     if search:
         pattern = f"%{search}%"
         query = query.filter(
             or_(
                 RopaRecord.activity_name.ilike(pattern),
-                RopaRecord.process_name.ilike(pattern),
                 RopaRecord.purpose.ilike(pattern),
             )
         )

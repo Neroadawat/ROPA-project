@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime,date
 from typing import Optional
 
 from sqlalchemy import Date, String, Boolean, Integer, DateTime, Text, ForeignKey, func
@@ -23,7 +23,6 @@ class RopaRecord(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Activity & Purpose
-    process_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     activity_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     purpose: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     risk_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
@@ -35,7 +34,6 @@ class RopaRecord(Base):
 
     # Legal Basis
     legal_basis_thai: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    legal_basis_gdpr: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     minor_consent_under_10: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     minor_consent_10_20: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
@@ -48,8 +46,8 @@ class RopaRecord(Base):
 
     # Retention & Storage
     retention_period: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    retention_expiry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    next_review_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    retention_expiry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)  
+    next_review_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)       
     storage_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     storage_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     access_rights: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

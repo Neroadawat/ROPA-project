@@ -13,7 +13,6 @@ from app.services.audit_service import log_action
 
 # Column definitions for export sheets
 COMMON_COLUMNS = [
-    ("process_name", "Process Name"),
     ("activity_name", "Activity Name"),
     ("department", "Department"),
     ("purpose", "Purpose"),

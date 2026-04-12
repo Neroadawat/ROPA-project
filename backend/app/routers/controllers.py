@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.controller import ControllerCreate, ControllerUpdate, ControllerResponse
 from app.services import controller_service
@@ -16,7 +16,7 @@ def list_controllers(
     per_page: int = Query(20, ge=1, le=100),
     include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     result = controller_service.list_controllers(db, page=page, per_page=per_page, include_inactive=include_inactive)
     result["items"] = [ControllerResponse.model_validate(c) for c in result["items"]]

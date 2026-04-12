@@ -14,7 +14,7 @@ from app.models.user import User
 
 # Fields used for completeness calculation (the 8-section key fields)
 _COMPLETENESS_FIELDS = [
-    "process_name", "activity_name", "purpose", "risk_level",
+    "activity_name", "purpose", "risk_level",
     "data_acquisition_method", "data_source_direct",
     "legal_basis_thai",
     "retention_period", "storage_type", "storage_method",
@@ -241,11 +241,16 @@ def get_sensitive_data_mapping(db: Session, user: User) -> dict:
     """Departments with most sensitive data."""
     base = _dept_scope(_active_records(db), user)
 
+    # Build a subquery of active record IDs to avoid ambiguous joins
+    active_ids = base.with_entities(RopaRecord.id).subquery()
+
     rows = (
-        base.with_entities(
+        db.query(
             Department.name.label("department"),
             func.count(RopaPersonalDataType.personal_data_type_id).label("sensitive_count"),
         )
+        .select_from(RopaRecord)
+        .filter(RopaRecord.id.in_(db.query(active_ids)))
         .join(Department, RopaRecord.department_id == Department.id)
         .join(RopaPersonalDataType, RopaRecord.id == RopaPersonalDataType.ropa_record_id)
         .join(PersonalDataType, RopaPersonalDataType.personal_data_type_id == PersonalDataType.id)

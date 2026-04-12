@@ -32,7 +32,6 @@ export default function NewRopaRecordPage() {
         processor_id: form.processor_id ? Number(form.processor_id) : undefined,
         data_subject_category_ids: form.data_subject_category_ids,
         personal_data_type_ids: form.personal_data_type_ids,
-        process_name: form.process_name || undefined,
         activity_name: form.activity_name || undefined,
         purpose: form.purpose || undefined,
         risk_level: form.risk_level || undefined,
@@ -82,7 +81,7 @@ export default function NewRopaRecordPage() {
       <Header title="สร้าง ROPA Record ใหม่" description="กรอกข้อมูลทั้ง 8 ส่วนเพื่อสร้าง Record of Processing Activities" />
       <div className="p-6 max-w-4xl">
         <div className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 backdrop-blur-sm p-6">
-          <RopaForm form={form} setForm={setForm} isSubmitting={isSubmitting} onSubmit={handleSubmit} onCancel={() => router.push("/ropa-records")} />
+          <RopaForm form={form} setForm={setForm} isSubmitting={isSubmitting} userRole={user?.role} userDepartmentId={user?.department_id ?? null} onSubmit={handleSubmit} onCancel={() => router.push("/ropa-records")} />
         </div>
       </div>
     </DashboardLayout>

@@ -33,7 +33,7 @@ function AlertSection({ title, items, variant, icon, onView }: {
         {items.map((item) => (
           <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.08] bg-[#0f172a]/80 hover:bg-white/[0.03] transition-colors">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground text-sm">{item.process_name || item.activity_name || `Record #${item.id}`}</p>
+              <p className="font-medium text-foreground text-sm">{item.activity_name || `Record #${item.id}`}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {item.department_name}
                 {item.retention_expiry_date && ` • หมดอายุ: ${new Date(item.retention_expiry_date).toLocaleDateString("th-TH")}`}

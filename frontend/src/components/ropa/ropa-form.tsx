@@ -22,7 +22,6 @@ export interface RopaFormData {
   processor_id: string;
   data_subject_category_ids: number[];
   personal_data_type_ids: number[];
-  process_name: string;
   activity_name: string;
   purpose: string;
   risk_level: string;
@@ -30,7 +29,6 @@ export interface RopaFormData {
   data_source_direct: string;
   data_source_other: string;
   legal_basis_thai: string;
-  legal_basis_gdpr: string;
   minor_consent_under_10: string;
   minor_consent_10_20: string;
   cross_border_transfer: string;
@@ -61,9 +59,9 @@ export interface RopaFormData {
 export const EMPTY_FORM: RopaFormData = {
   department_id: "", role_type: "Controller", controller_id: "", processor_id: "",
   data_subject_category_ids: [], personal_data_type_ids: [],
-  process_name: "", activity_name: "", purpose: "", risk_level: "",
+  activity_name: "", purpose: "", risk_level: "",
   data_acquisition_method: "", data_source_direct: "", data_source_other: "",
-  legal_basis_thai: "", legal_basis_gdpr: "", minor_consent_under_10: "", minor_consent_10_20: "",
+  legal_basis_thai: "", minor_consent_under_10: "", minor_consent_10_20: "",
   cross_border_transfer: "", cross_border_affiliate: "", cross_border_method: "", cross_border_standard: "", cross_border_exception: "",
   retention_period: "", retention_expiry_date: "", next_review_date: "",
   storage_type: "", storage_method: "", access_rights: "", deletion_method: "",
@@ -79,6 +77,8 @@ interface RopaFormProps {
   isEdit?: boolean;
   readOnly?: boolean;
   isSubmitting?: boolean;
+  userRole?: string;
+  userDepartmentId?: number | null;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -124,7 +124,7 @@ function MultiSelect({ label, options, selected, onChange, readOnly }: {
   );
 }
 
-export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, onSubmit, onCancel }: RopaFormProps) {
+export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRole, userDepartmentId, onSubmit, onCancel }: RopaFormProps) {
   const [departments, setDepartments] = useState<DepartmentData[]>([]);
   const [controllers, setControllers] = useState<ControllerData[]>([]);
   const [processors, setProcessors] = useState<ProcessorData[]>([]);
@@ -202,7 +202,7 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, onSubm
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="department_id">แผนก *</Label>
-              <select id="department_id" value={form.department_id} disabled={readOnly || isEdit}
+              <select id="department_id" value={form.department_id} disabled={readOnly || isEdit || userRole === "Department_User"}
                 onChange={(e) => update("department_id", e.target.value)}
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm">
                 <option value="">เลือกแผนก</option>
@@ -240,11 +240,6 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, onSubm
               </select>
             </div>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="process_name">ชื่อกระบวนการ</Label>
-            <Input id="process_name" value={form.process_name} readOnly={readOnly}
-              onChange={(e) => update("process_name", e.target.value)} placeholder="ชื่อกระบวนการ" className="h-10 rounded-lg" />
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="activity_name">ชื่อกิจกรรม</Label>
             <Input id="activity_name" value={form.activity_name} readOnly={readOnly}
@@ -316,11 +311,6 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, onSubm
               ))}
             </div>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="legal_basis_gdpr">ฐานกฎหมาย (GDPR)</Label>
-            <Input id="legal_basis_gdpr" value={form.legal_basis_gdpr} readOnly={readOnly}
-              onChange={(e) => update("legal_basis_gdpr", e.target.value)} placeholder="ฐานกฎหมายตาม GDPR (ถ้ามี)" className="h-10 rounded-lg" />
-          </div>
           {form.role_type === "Controller" && (
             <>
               <TextArea id="minor_consent_under_10" label="ความยินยอมผู้เยาว์ (อายุต่ำกว่า 10 ปี)"

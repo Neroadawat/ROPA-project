@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.department import DepartmentCreate, DepartmentUpdate, DepartmentResponse
 from app.services import department_service
@@ -15,7 +15,7 @@ def list_departments(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     result = department_service.list_departments(db, page=page, per_page=per_page)
     result["items"] = [DepartmentResponse.model_validate(d) for d in result["items"]]

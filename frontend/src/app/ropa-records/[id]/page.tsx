@@ -38,7 +38,7 @@ export default function RopaRecordDetailPage() {
         processor_id: data.processor_id ? String(data.processor_id) : "",
         data_subject_category_ids: data.data_subjects.map((d) => d.id),
         personal_data_type_ids: data.personal_data_types.map((p) => p.id),
-        process_name: data.process_name ?? "",
+        process_name: "",
         activity_name: data.activity_name ?? "",
         purpose: data.purpose ?? "",
         risk_level: data.risk_level ?? "",
@@ -95,7 +95,7 @@ export default function RopaRecordDetailPage() {
         processor_id: form.processor_id ? Number(form.processor_id) : undefined,
         data_subject_category_ids: form.data_subject_category_ids,
         personal_data_type_ids: form.personal_data_type_ids,
-        process_name: form.process_name || undefined,
+        process_name: undefined,
         activity_name: form.activity_name || undefined,
         purpose: form.purpose || undefined,
         risk_level: form.risk_level || undefined,
@@ -163,7 +163,7 @@ export default function RopaRecordDetailPage() {
     <DashboardLayout>
       <Header
         title={isEditing ? "แก้ไข ROPA Record" : `ROPA Record #${record.id}`}
-        description={record.process_name || record.activity_name || undefined}
+        description={record.activity_name || undefined}
         actions={
           !isEditing && (
             <div className="flex items-center gap-2">
@@ -187,6 +187,8 @@ export default function RopaRecordDetailPage() {
             isEdit={isEditing}
             readOnly={!isEditing}
             isSubmitting={isSubmitting}
+            userRole={user?.role}
+            userDepartmentId={user?.department_id ?? null}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditing(false); loadRecord(); }}
           />
