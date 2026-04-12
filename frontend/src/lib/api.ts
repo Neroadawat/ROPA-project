@@ -522,7 +522,8 @@ export interface RopaRecordCreatePayload {
   reason?: string;
 }
 
-export interface RopaRecordUpdatePayload extends Omit<RopaRecordCreatePayload, 'department_id' | 'reason'> {
+export interface RopaRecordUpdatePayload extends Omit<RopaRecordCreatePayload, 'department_id' | 'role_type' | 'reason'> {
+  role_type?: string;
   reason: string;
 }
 

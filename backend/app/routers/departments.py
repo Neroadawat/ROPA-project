@@ -28,7 +28,7 @@ def create_department(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    dept = department_service.create_department(db, body)
+    dept = department_service.create_department(db, body, user_id=current_user.id)
     return DepartmentResponse.model_validate(dept)
 
 
@@ -39,7 +39,7 @@ def update_department(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    dept = department_service.update_department(db, department_id, body)
+    dept = department_service.update_department(db, department_id, body, user_id=current_user.id)
     return DepartmentResponse.model_validate(dept)
 
 
@@ -49,4 +49,4 @@ def delete_department(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    department_service.delete_department(db, department_id)
+    department_service.delete_department(db, department_id, user_id=current_user.id)

@@ -31,7 +31,7 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    user = user_service.create_user(db, body)
+    user = user_service.create_user(db, body, user_id=current_user.id)
     return UserResponse.model_validate(user)
 
 
@@ -52,7 +52,7 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    user = user_service.update_user(db, user_id, body)
+    user = user_service.update_user(db, user_id, body, user_id=current_user.id)
     return UserResponse.model_validate(user)
 
 
@@ -62,5 +62,5 @@ def deactivate_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    user = user_service.deactivate_user(db, user_id)
+    user = user_service.deactivate_user(db, user_id, user_id=current_user.id)
     return UserResponse.model_validate(user)

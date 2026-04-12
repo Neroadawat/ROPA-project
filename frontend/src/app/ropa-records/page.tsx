@@ -11,11 +11,11 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Plus, Eye, Pencil, Trash2, Loader2, FileText, History, AlertTriangle,
+  Plus, Eye, Pencil, Trash2, Loader2, FileText, History, AlertTriangle, Download,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import {
-  ropaRecordsApi, departmentsApi, ApiError,
+  ropaRecordsApi, departmentsApi, exportApi, ApiError,
   type RopaRecordListItem, type DepartmentData,
 } from "@/lib/api";
 
@@ -55,6 +55,28 @@ export default function RopaRecordsPage() {
   const [deleteReason, setDeleteReason] = useState("");
 
   const canCreate = user?.role !== "Viewer_Auditor";
+  const isAdmin = user?.role === "Admin";
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportApi.excel();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ropa-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("ส่งออกข้อมูลสำเร็จ");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.detail : "ไม่สามารถส่งออกข้อมูลได้");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -161,6 +183,12 @@ export default function RopaRecordsPage() {
         description="จัดการ Record of Processing Activities"
         actions={
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" className="rounded-lg gap-1.5" onClick={handleExport} disabled={exporting}>
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                ส่งออก Excel
+              </Button>
+            )}
             <Button variant="outline" className="rounded-lg gap-1.5" onClick={() => router.push("/ropa-records/retention-alerts")}>
               <AlertTriangle className="h-4 w-4" />การแจ้งเตือน
             </Button>
