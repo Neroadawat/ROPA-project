@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.routers import auth, users, departments, audit_logs, user_logs, controllers, processors, master_data, ropa_records, dashboard, suggestions
+from app.routers import auth, users, departments, audit_logs, user_logs, controllers, processors, master_data, ropa_records, dashboard, suggestions, import_router, export_router
 
 app = FastAPI(
     title="ROPA Management Platform API",
@@ -30,6 +30,8 @@ app.include_router(master_data.router, prefix="/api/master-data", tags=["Master 
 app.include_router(ropa_records.router, prefix="/api/ropa-records", tags=["ROPA Records"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["Suggestions"])
+app.include_router(import_router.router, prefix="/api/import", tags=["Import"])
+app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
 
 
 @app.on_event("startup")
