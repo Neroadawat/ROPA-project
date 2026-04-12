@@ -1,6 +1,6 @@
 """ROPA Record service — CRUD, approval workflow helpers, version snapshots."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from math import ceil
 from typing import Optional
 
@@ -421,3 +421,170 @@ def reject_ropa_record(db: Session, record_id: int, rejection_reason: str, user:
     )
     db.refresh(record)
     return record
+
+
+# ---------------------------------------------------------------------------
+# Version History
+# ---------------------------------------------------------------------------
+
+def list_record_versions(
+    db: Session,
+    record_id: int,
+    user: User,
+    page: int = 1,
+    per_page: int = 20,
+) -> dict:
+    """List version snapshots for a ROPA record (newest first)."""
+    # Ensure user has access to the record
+    get_ropa_record(db, record_id, user)
+
+    query = (
+        db.query(RecordVersion)
+        .options(joinedload(RecordVersion.changer))
+        .filter(RecordVersion.ropa_record_id == record_id)
+        .order_by(RecordVersion.version_number.desc())
+    )
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    pages = ceil(total / per_page) if per_page else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
+
+
+def get_record_version(db: Session, record_id: int, version_id: int, user: User) -> RecordVersion:
+    """Get a single version snapshot by ID."""
+    # Ensure user has access to the record
+    get_ropa_record(db, record_id, user)
+
+    version = (
+        db.query(RecordVersion)
+        .options(joinedload(RecordVersion.changer))
+        .filter(
+            RecordVersion.id == version_id,
+            RecordVersion.ropa_record_id == record_id,
+        )
+        .first()
+    )
+    if not version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ไม่พบ Version ที่ระบุ")
+    return version
+
+
+def compare_record_versions(
+    db: Session,
+    record_id: int,
+    version_id_1: int,
+    version_id_2: int,
+    user: User,
+) -> dict:
+    """Compare two version snapshots and return field-level diff."""
+    v1 = get_record_version(db, record_id, version_id_1, user)
+    v2 = get_record_version(db, record_id, version_id_2, user)
+
+    # Collect all keys from both snapshots
+    all_keys = sorted(set(v1.snapshot.keys()) | set(v2.snapshot.keys()))
+    changes = []
+    for key in all_keys:
+        old_val = v1.snapshot.get(key)
+        new_val = v2.snapshot.get(key)
+        if old_val != new_val:
+            changes.append({
+                "field": key,
+                "old_value": str(old_val) if old_val is not None else None,
+                "new_value": str(new_val) if new_val is not None else None,
+            })
+
+    return {"version_1": v1, "version_2": v2, "changes": changes}
+
+
+# ---------------------------------------------------------------------------
+# Retention Alerts
+# ---------------------------------------------------------------------------
+
+def get_retention_alerts(
+    db: Session,
+    user: User,
+    urgency: Optional[str] = None,
+    department_id: Optional[int] = None,
+) -> dict:
+    """Return retention and review alerts for approved, non-deleted ROPA records.
+
+    Categories:
+      - overdue: retention_expiry_date < today
+      - within_30: retention_expiry_date within 30 days from today
+      - within_60_90: retention_expiry_date within 60-90 days from today
+      - review_overdue: next_review_date < today
+
+    Returns dict with categorised record lists and summary counts.
+    """
+    today = date.today()
+
+    # --- Retention-based alerts (require retention_expiry_date) ----------
+    retention_query = (
+        _base_query(db)
+        .filter(
+            RopaRecord.status == "approved",
+            RopaRecord.is_deleted == False,
+            RopaRecord.retention_expiry_date.isnot(None),
+        )
+    )
+    retention_query = _apply_dept_scope(retention_query, user)
+    if department_id is not None:
+        retention_query = retention_query.filter(RopaRecord.department_id == department_id)
+
+    retention_records = retention_query.all()
+
+    overdue: list[RopaRecord] = []
+    within_30: list[RopaRecord] = []
+    within_60_90: list[RopaRecord] = []
+
+    for rec in retention_records:
+        expiry = rec.retention_expiry_date
+        if expiry < today:
+            overdue.append(rec)
+        elif expiry <= today + timedelta(days=30):
+            within_30.append(rec)
+        elif today + timedelta(days=60) <= expiry <= today + timedelta(days=90):
+            within_60_90.append(rec)
+
+    # --- Review-based alerts (require next_review_date) ------------------
+    review_query = (
+        _base_query(db)
+        .filter(
+            RopaRecord.status == "approved",
+            RopaRecord.is_deleted == False,
+            RopaRecord.next_review_date.isnot(None),
+            RopaRecord.next_review_date < today,
+        )
+    )
+    review_query = _apply_dept_scope(review_query, user)
+    if department_id is not None:
+        review_query = review_query.filter(RopaRecord.department_id == department_id)
+
+    review_overdue: list[RopaRecord] = review_query.all()
+
+    # --- Apply urgency filter if requested --------------------------------
+    alerts: dict[str, list[RopaRecord]] = {
+        "overdue": overdue,
+        "within_30": within_30,
+        "within_60_90": within_60_90,
+        "review_overdue": review_overdue,
+    }
+
+    if urgency:
+        requested = set(urgency.split(","))
+        alerts = {k: v for k, v in alerts.items() if k in requested}
+
+    summary = {k: len(v) for k, v in alerts.items()}
+
+    return {
+        "alerts": alerts,
+        "summary": summary,
+    }
