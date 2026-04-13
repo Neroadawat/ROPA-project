@@ -73,8 +73,8 @@ const ROLE_LABELS: Record<UserRole, string> = {
   Admin: "ผู้ดูแลระบบ", DPO: "DPO", Department_User: "ผู้ใช้แผนก", Viewer_Auditor: "ผู้ตรวจสอบ",
 };
 const ROLE_COLORS: Record<UserRole, string> = {
-  Admin: "bg-blue-500/15 text-blue-400", DPO: "bg-violet-500/15 text-violet-400",
-  Department_User: "bg-emerald-500/15 text-emerald-400", Viewer_Auditor: "bg-amber-500/15 text-amber-400",
+  Admin: "bg-red-500/20 text-red-300", DPO: "bg-violet-500/20 text-violet-300",
+  Department_User: "bg-emerald-500/20 text-emerald-300", Viewer_Auditor: "bg-amber-500/20 text-amber-300",
 };
 
 export function Sidebar() {
@@ -88,11 +88,11 @@ export function Sidebar() {
   })).filter((s) => s.items.length > 0);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-white/[0.06] bg-[#080c16]/85 backdrop-blur-xl">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col bg-[#1e293b] border-r border-white/[0.06]">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <ShieldCheck className="h-5 w-5 text-blue-400" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/15 border border-red-500/20">
+          <ShieldCheck className="h-5 w-5 text-red-400" />
         </div>
         <div>
           <p className="text-sm font-semibold text-white">ROPA Platform</p>
@@ -120,11 +120,11 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150",
                       isActive
-                        ? "bg-blue-500/10 text-blue-400"
+                        ? "bg-red-500/15 text-red-400"
                         : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-200"
                     )}
                   >
-                    <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-blue-400")} />
+                    <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-red-400")} />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -142,7 +142,7 @@ export function Sidebar() {
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150",
             pathname === "/settings/change-password"
-              ? "bg-blue-500/10 text-blue-400"
+              ? "bg-red-500/15 text-red-400"
               : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-200"
           )}
         >
@@ -161,7 +161,7 @@ export function Sidebar() {
       {/* User */}
       <div className="mx-3 mb-3 mt-1">
         <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-400">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 text-xs font-bold text-red-400">
             {user.name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">

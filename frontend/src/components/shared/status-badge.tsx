@@ -3,25 +3,19 @@ import { cn } from "@/lib/utils";
 type BadgeVariant = "success" | "warning" | "danger" | "info" | "default" | "purple";
 
 const VARIANT_STYLES: Record<BadgeVariant, string> = {
-  success: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/25",
-  warning: "bg-amber-500/15 text-amber-300 ring-amber-500/25",
-  danger: "bg-red-500/15 text-red-300 ring-red-500/25",
-  info: "bg-blue-500/15 text-blue-300 ring-blue-500/25",
-  purple: "bg-violet-500/15 text-violet-300 ring-violet-500/25",
-  default: "bg-white/[0.08] text-slate-300 ring-white/[0.1]",
+  success: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  warning: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  danger: "bg-red-50 text-red-700 ring-red-600/20",
+  info: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  purple: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  default: "bg-slate-100 text-slate-600 ring-slate-500/20",
 };
-
 const DOT_COLORS: Record<BadgeVariant, string> = {
-  success: "bg-emerald-400", warning: "bg-amber-400", danger: "bg-red-400",
-  info: "bg-blue-400", purple: "bg-violet-400", default: "bg-slate-400",
+  success: "bg-emerald-500", warning: "bg-amber-500", danger: "bg-red-500",
+  info: "bg-blue-500", purple: "bg-violet-500", default: "bg-slate-400",
 };
 
-interface StatusBadgeProps {
-  variant?: BadgeVariant;
-  children: React.ReactNode;
-  dot?: boolean;
-  className?: string;
-}
+interface StatusBadgeProps { variant?: BadgeVariant; children: React.ReactNode; dot?: boolean; className?: string; }
 
 export function StatusBadge({ variant = "default", children, dot = false, className }: StatusBadgeProps) {
   return (

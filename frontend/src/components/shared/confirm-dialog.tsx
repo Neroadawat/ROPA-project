@@ -35,7 +35,7 @@ export function ConfirmDialog({
       />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-2xl shadow-black/40 mx-4 bg-[#0f172a]/95 backdrop-blur-xl">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 p-6 shadow-xl mx-4 bg-white">
         <button
           onClick={onCancel}
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors"

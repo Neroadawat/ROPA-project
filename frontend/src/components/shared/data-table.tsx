@@ -77,8 +77,8 @@ export function DataTable<T extends object>({
 
   const SortIcon = ({ colKey }: { colKey: string }) => {
     if (sortKey !== colKey) return <ArrowUpDown className="h-3.5 w-3.5 text-slate-600" />;
-    if (sortDir === "asc") return <ArrowUp className="h-3.5 w-3.5 text-blue-400" />;
-    return <ArrowDown className="h-3.5 w-3.5 text-blue-400" />;
+    if (sortDir === "asc") return <ArrowUp className="h-3.5 w-3.5 text-red-500" />;
+    return <ArrowDown className="h-3.5 w-3.5 text-red-500" />;
   };
 
   return (
@@ -91,18 +91,18 @@ export function DataTable<T extends object>({
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-9 h-9 rounded-lg bg-white/[0.05] border-white/[0.1] text-slate-200 placeholder:text-slate-600 focus-visible:border-blue-500/40 focus-visible:ring-blue-500/20"
+            className="pl-9 h-9 rounded-lg bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:border-red-500 focus-visible:ring-red-500/20"
           />
         </div>
         {filters}
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 backdrop-blur-sm overflow-hidden shadow-lg shadow-black/20">
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.08] bg-white/[0.04]">
+              <tr className="border-b border-slate-100 bg-slate-50/80">
                 {columns.map((col) => (
                   <th
                     key={col.key}
@@ -124,14 +124,14 @@ export function DataTable<T extends object>({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody className="divide-y divide-slate-100">
               {paged.length === 0 ? (
                 <tr><td colSpan={columns.length + (actions ? 1 : 0)} className="px-4 py-12 text-center text-slate-500">{emptyMessage}</td></tr>
               ) : (
                 paged.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-white/[0.03] transition-colors duration-150">
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors duration-150">
                     {columns.map((col) => (
-                      <td key={col.key} className={cn("px-4 py-3.5 text-slate-200", col.className)}>
+                      <td key={col.key} className={cn("px-4 py-3.5 text-slate-700", col.className)}>
                         {col.render ? col.render(item, start + idx) : String(getField(item, col.key) ?? "-")}
                       </td>
                     ))}
@@ -147,14 +147,14 @@ export function DataTable<T extends object>({
           </table>
         </div>
         {sorted.length > 0 && (
-          <div className="flex items-center justify-between border-t border-white/[0.08] bg-white/[0.03] px-4 py-3">
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3">
             <p className="text-xs text-slate-400">แสดง {start + 1}-{Math.min(start + pageSize, sorted.length)} จาก {sorted.length} รายการ</p>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage(1)} disabled={safePage <= 1} className="text-slate-500 hover:text-white"><ChevronsLeft className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="text-slate-500 hover:text-white"><ChevronLeft className="h-3.5 w-3.5" /></Button>
-              <span className="px-3 text-xs font-medium text-slate-400">{safePage} / {totalPages}</span>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="text-slate-500 hover:text-white"><ChevronRight className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage(totalPages)} disabled={safePage >= totalPages} className="text-slate-500 hover:text-white"><ChevronsRight className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setPage(1)} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronsLeft className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+              <span className="px-3 text-xs font-medium text-slate-500">{safePage} / {totalPages}</span>
+              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronRight className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => setPage(totalPages)} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronsRight className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
         )}

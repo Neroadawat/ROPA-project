@@ -15,16 +15,14 @@ export function Header({ title, description, actions }: HeaderProps) {
   if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/[0.06] bg-[#080c16]/60 backdrop-blur-xl px-6 py-4">
+    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-xl px-6 py-4">
       <div>
-        <h1 className="text-lg font-semibold text-white">{title}</h1>
-        {description && (
-          <p className="mt-0.5 text-sm text-slate-400">{description}</p>
-        )}
+        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+        {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
       </div>
       <div className="flex items-center gap-3">
         {actions}
-        <Button variant="ghost" size="icon" className="relative text-slate-400 hover:text-white">
+        <Button variant="ghost" size="icon" className="relative text-slate-400 hover:text-slate-700">
           <Bell className="h-4 w-4" />
         </Button>
       </div>

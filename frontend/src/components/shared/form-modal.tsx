@@ -35,9 +35,9 @@ export function FormModal({
         onClick={onCancel}
       />
 
-      <div className="relative z-10 w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-white/[0.1] shadow-2xl shadow-black/40 mx-4 bg-[#0f172a]/95 backdrop-blur-xl">
+      <div className="relative z-10 w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 shadow-xl mx-4 bg-white">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div>
             <h3 className="text-base font-semibold text-foreground">{title}</h3>
             {description && (
@@ -58,7 +58,7 @@ export function FormModal({
         <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/[0.08]">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
           <Button
             variant="outline"
             onClick={onCancel}
