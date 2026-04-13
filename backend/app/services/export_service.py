@@ -23,7 +23,6 @@ COMMON_COLUMNS = [
     ("data_source_direct", "Data Source Direct"),
     ("data_source_other", "Data Source Other"),
     ("legal_basis_thai", "Legal Basis Thai"),
-    ("legal_basis_gdpr", "Legal Basis GDPR"),
     ("minor_consent_under_10", "Minor Consent Under 10"),
     ("minor_consent_10_20", "Minor Consent 10-20"),
     ("cross_border_transfer", "Cross Border Transfer"),
