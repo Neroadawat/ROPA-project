@@ -54,25 +54,25 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left Panel — Branding */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-[oklch(0.17_0.04_265)]">
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-[#1e293b]">
         <div className="absolute inset-0">
           <motion.div
             className="absolute w-[500px] h-[500px] rounded-full opacity-30 blur-[100px]"
-            style={{ background: "oklch(0.45 0.18 262)" }}
+            style={{ background: "#dc2626" }}
             animate={{ x: [0, 60, -30, 0], y: [0, -40, 50, 0] }}
             transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
             initial={{ top: "-10%", left: "-10%" }}
           />
           <motion.div
             className="absolute w-[400px] h-[400px] rounded-full opacity-20 blur-[80px]"
-            style={{ background: "oklch(0.55 0.15 18)" }}
+            style={{ background: "#f43f5e" }}
             animate={{ x: [0, -50, 40, 0], y: [0, 60, -30, 0] }}
             transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
             initial={{ bottom: "-5%", right: "-5%" }}
           />
           <motion.div
             className="absolute w-[300px] h-[300px] rounded-full opacity-15 blur-[60px]"
-            style={{ background: "oklch(0.6 0.2 180)" }}
+            style={{ background: "#f97316" }}
             animate={{ x: [0, 30, -20, 0], y: [0, -50, 30, 0] }}
             transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
             initial={{ top: "40%", left: "30%" }}
@@ -91,7 +91,7 @@ export default function LoginPage() {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
             <h2 className="text-5xl font-bold leading-[1.15] mb-6 tracking-tight">
               ROPA<br />
-              <span className="bg-gradient-to-r from-sky-300 via-blue-300 to-indigo-400 bg-clip-text text-transparent">By Lonein</span>
+              <span className="bg-gradient-to-r from-red-400 via-rose-400 to-orange-400 bg-clip-text text-transparent">By Lonein</span>
             </h2>
             <p className="text-base text-white/60 leading-relaxed max-w-sm">
               รวมศูนย์ข้อมูลกิจกรรมการประมวลผลข้อมูลส่วนบุคคล
@@ -100,7 +100,7 @@ export default function LoginPage() {
             <motion.div className="mt-10 p-5 rounded-2xl bg-white/[0.07] backdrop-blur-xl border border-white/10 max-w-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-medium text-white/80">ภาพรวมระบบ</p>
-                <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">Live</span>
+                <span className="text-[10px] px-2 py-1 rounded-full bg-red-500/20 text-red-300 font-medium">Live</span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {[{ label: "ROPA Records", value: "—" }, { label: "แผนก", value: "—" }, { label: "Compliance", value: "—" }].map((s) => (
@@ -110,7 +110,7 @@ export default function LoginPage() {
             </motion.div>
           </motion.div>
           <motion.div className="flex gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.7 }}>
-            {[{ label: "PDPA Compliant", color: "bg-emerald-400" }, { label: "Audit Trail", color: "bg-sky-400" }, { label: "AI-Powered", color: "bg-violet-400" }].map((b) => (
+            {[{ label: "PDPA Compliant", color: "bg-red-400" }, { label: "Audit Trail", color: "bg-rose-400" }, { label: "AI-Powered", color: "bg-orange-400" }].map((b) => (
               <span key={b.label} className="flex items-center gap-2 text-xs text-white/50 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08]">
                 <span className={`w-1.5 h-1.5 rounded-full ${b.color}`} />{b.label}
               </span>
