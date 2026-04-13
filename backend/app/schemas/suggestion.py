@@ -34,7 +34,7 @@ class SuggestionLogResponse(BaseModel):
     ropa_record_id: Optional[int] = None
     input_activity_name: Optional[str] = None
     input_purpose: Optional[str] = None
-    suggestions: Optional[dict] = None
+    suggestions: Optional[List[dict]] = None
     selected_legal_basis: Optional[str] = None
     accepted: Optional[bool] = None
     engine_version: Optional[str] = None

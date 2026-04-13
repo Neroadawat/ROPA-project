@@ -17,11 +17,11 @@ const URGENCY_CONFIG: Record<string, { label: string; variant: "danger" | "warni
   review_overdue: { label: "เกินกำหนดทบทวน", variant: "danger", icon: "🔴" },
 };
 
-function AlertSection({ title, items, variant, icon, onView }: {
-  title: string; items: RetentionAlertItem[]; variant: "danger" | "warning" | "info" | "default"; icon: string;
+function AlertSection({ title, items = [], variant, icon, onView }: {
+  title: string; items?: RetentionAlertItem[]; variant: "danger" | "warning" | "info" | "default"; icon: string;
   onView: (id: number) => void;
 }) {
-  if (items.length === 0) return null;
+  if (!items || items.length === 0) return null;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export default function RetentionAlertsPage() {
   useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
   const totalAlerts = alerts
-    ? alerts.overdue.length + alerts.within_30.length + alerts.within_60_90.length + alerts.review_overdue.length
+    ? (alerts.overdue?.length ?? 0) + (alerts.within_30?.length ?? 0) + (alerts.within_60_90?.length ?? 0) + (alerts.review_overdue?.length ?? 0)
     : 0;
 
   if (loading) {

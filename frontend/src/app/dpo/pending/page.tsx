@@ -110,6 +110,45 @@ export default function DpoPendingPage() {
       ),
     },
     {
+      key: "rejection_info", label: "หมายเหตุ",
+      render: (item) => {
+        const hasRejection = item.rejection_reason;
+        const hasEdit = item.edit_reason;
+        
+        return (
+          <div className="text-xs space-y-3">
+            {hasRejection && (
+              <div>
+                <span className="text-red-400 font-medium block mb-1">⛔ ปฏิเสธ:</span>
+                <p className="text-muted-foreground">{item.rejection_reason}</p>
+                {item.rejected_by && item.rejected_at && (
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    โดย {item.rejected_by.name} เมื่อ {new Date(item.rejected_at).toLocaleDateString("th-TH")}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {hasEdit && (
+              <div>
+                <span className="text-blue-400 font-medium block mb-1">✏️  แก้ไข:</span>
+                <p className="text-muted-foreground">{item.edit_reason}</p>
+                {item.edited_by && item.edited_at && (
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    โดย {item.edited_by.name} เมื่อ {new Date(item.edited_at).toLocaleDateString("th-TH")}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {!hasRejection && !hasEdit && (
+              <span className="text-muted-foreground/50">-</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "created_at", label: "วันที่ส่ง", sortable: true,
       render: (item) => (
         <span className="text-muted-foreground text-xs">

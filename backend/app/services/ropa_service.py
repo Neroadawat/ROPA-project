@@ -25,7 +25,7 @@ _RECORD_FIELDS = [
     "department_id", "role_type", "controller_id", "processor_id",
     "activity_name", "purpose", "risk_level",
     "data_acquisition_method", "data_source_direct", "data_source_other",
-    "legal_basis_thai", "legal_basis_gdpr",
+    "legal_basis_thai",
     "minor_consent_under_10", "minor_consent_10_20",
     "cross_border_transfer", "cross_border_affiliate", "cross_border_method",
     "cross_border_standard", "cross_border_exception",
@@ -88,6 +88,35 @@ def _sync_junction(db: Session, record: RopaRecord, ds_ids: list[int], pdt_ids: 
     db.query(RopaPersonalDataType).filter(RopaPersonalDataType.ropa_record_id == record.id).delete()
     for pdt_id in set(pdt_ids):
         db.add(RopaPersonalDataType(ropa_record_id=record.id, personal_data_type_id=pdt_id))
+
+
+def _enrich_with_edit_info(db: Session, record: RopaRecord) -> RopaRecord:
+    """Attach latest edit reason and editee info to a record."""
+    # Get the latest version if version_number > 1 (meaning it was edited)
+    latest_version = (
+        db.query(RecordVersion)
+        .filter(RecordVersion.ropa_record_id == record.id)
+        .order_by(RecordVersion.version_number.desc())
+        .first()
+    )
+    
+    # Add dynamic attributes (not persisted)
+    if latest_version and latest_version.version_number > 1:
+        # This record has been edited, get the editor info
+        editor = (
+            db.query(User)
+            .filter(User.id == latest_version.changed_by)
+            .first()
+        )
+        record.edit_reason = latest_version.change_reason
+        record.edited_by = editor
+        record.edited_at = latest_version.created_at
+    else:
+        record.edit_reason = None
+        record.edited_by = None
+        record.edited_at = None
+    
+    return record
 
 
 def _base_query(db: Session):
@@ -164,7 +193,11 @@ def get_ropa_record(db: Session, record_id: int, user: User) -> RopaRecord:
 
 
 def update_ropa_record(db: Session, record_id: int, data: RopaRecordUpdate, user: User) -> RopaRecord:
-    """Update a ROPA record. If approved → pending_edit_approval."""
+    """Update a ROPA record. Status transitions:
+    - approved → pending_edit_approval
+    - rejected + never approved (approved_at is null) → pending_approval (creation approval)
+    - rejected + was approved (approved_at is not null) → pending_edit_approval (edit approval)
+    """
     record = get_ropa_record(db, record_id, user)
 
     if record.is_deleted:
@@ -181,9 +214,18 @@ def update_ropa_record(db: Session, record_id: int, data: RopaRecordUpdate, user
     for key, value in update_data.items():
         setattr(record, key, value)
 
-    # Status transition: approved → pending_edit_approval
+    # Status transition based on current state and approval history
     if record.status == "approved":
         record.status = "pending_edit_approval"
+    elif record.status == "rejected":
+        # For rejected records, check if it was ever approved before
+        if record.approved_at is not None:
+            # Was previously approved, resubmitting an edit
+            record.status = "pending_edit_approval"
+        else:
+            # Never approved, resubmitting initial creation
+            record.status = "pending_approval"
+        # Note: Keep rejection_reason for audit trail visibility
 
     # Update junction tables if provided
     if data.data_subject_category_ids is not None:
@@ -332,7 +374,7 @@ def list_pending_records(
     page: int = 1,
     per_page: int = 20,
 ) -> dict:
-    """List ROPA records awaiting DPO approval."""
+    """List ROPA records awaiting DPO approval, including edit reason."""
     query = (
         _base_query(db)
         .filter(
@@ -346,8 +388,11 @@ def list_pending_records(
     items = query.offset((page - 1) * per_page).limit(per_page).all()
     pages = ceil(total / per_page) if per_page else 1
 
+    # Enrich each item with edit reason info
+    enriched_items = [_enrich_with_edit_info(db, item) for item in items]
+
     return {
-        "items": items,
+        "items": enriched_items,
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -410,6 +455,8 @@ def reject_ropa_record(db: Session, record_id: int, rejection_reason: str, user:
 
     record.status = "rejected"
     record.rejection_reason = rejection_reason
+    record.rejected_by = user.id
+    record.rejected_at = datetime.now()
 
     db.flush()
 
@@ -420,6 +467,7 @@ def reject_ropa_record(db: Session, record_id: int, rejection_reason: str, user:
         table_name="ropa_records",
         record_id=record.id,
         new_value={"rejection_reason": rejection_reason},
+        reason=f"Rejected: {rejection_reason}",
     )
     db.refresh(record)
     return record

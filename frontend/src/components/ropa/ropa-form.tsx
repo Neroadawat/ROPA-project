@@ -54,6 +54,7 @@ export interface RopaFormData {
   security_responsibility: string;
   security_audit: string;
   reason: string;
+  rejection_reason?: string;
 }
 
 export const EMPTY_FORM: RopaFormData = {
@@ -69,6 +70,7 @@ export const EMPTY_FORM: RopaFormData = {
   security_organizational: "", security_technical: "", security_physical: "",
   security_access_control: "", security_responsibility: "", security_audit: "",
   reason: "",
+  rejection_reason: "",
 };
 
 interface RopaFormProps {
@@ -79,6 +81,7 @@ interface RopaFormProps {
   isSubmitting?: boolean;
   userRole?: string;
   userDepartmentId?: number | null;
+  recordStatus?: string;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -124,7 +127,7 @@ function MultiSelect({ label, options, selected, onChange, readOnly }: {
   );
 }
 
-export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRole, userDepartmentId, onSubmit, onCancel }: RopaFormProps) {
+export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRole, userDepartmentId, recordStatus, onSubmit, onCancel }: RopaFormProps) {
   const [departments, setDepartments] = useState<DepartmentData[]>([]);
   const [controllers, setControllers] = useState<ControllerData[]>([]);
   const [processors, setProcessors] = useState<ProcessorData[]>([]);
@@ -184,6 +187,16 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
 
   return (
     <div className="space-y-6">
+      {/* Rejection Alert Banner */}
+      {form.rejection_reason && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-red-400">📋 ได้รับการปฏิเสธ</p>
+            <p className="text-sm text-red-300">{form.rejection_reason}</p>
+          </div>
+        </div>
+      )}
+
       {/* Section tabs */}
       <div className="flex flex-wrap gap-1.5">
         {sections.map((s) => (
@@ -413,8 +426,19 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
       {section === 8 && (
         <div className="space-y-4">
           {isEdit && (
-            <TextArea id="reason" label="เหตุผลในการแก้ไข *" value={form.reason}
-              onChange={(v) => update("reason", v)} readOnly={readOnly} placeholder="ระบุเหตุผลในการแก้ไข" />
+            <>
+              {recordStatus === "rejected" && (
+                <div className="p-3 rounded-lg bg-red-950/30 border border-red-500/30">
+                  <p className="text-sm text-red-300 mb-2">💡 แนะนำ: เนื่องจากบันทึกนี้ถูกปฏิเสธแล้ว กรุณาระบุว่า:</p>
+                  <ul className="text-xs text-red-200/80 space-y-1 ml-2">
+                    <li>• ถ้าเป็นการสร้างใหม่: "แก้การสร้างบันทึกครั้งที่ X"</li>
+                    <li>• ถ้าเป็นการแก้ไข: "แก้ไข [อธิบายการเปลี่ยนแปลง]"</li>
+                  </ul>
+                </div>
+              )}
+              <TextArea id="reason" label="เหตุผลในการแก้ไข *" value={form.reason}
+                onChange={(v) => update("reason", v)} readOnly={readOnly} placeholder="ระบุเหตุผลในการแก้ไข" />
+            </>
           )}
           {!isEdit && (
             <TextArea id="reason" label="หมายเหตุ" value={form.reason}

@@ -193,6 +193,8 @@ class RopaRecordResponse(BaseModel):
     role_type: str
     status: str
     rejection_reason: Optional[str] = None
+    rejected_by: Optional[UserBrief] = None
+    rejected_at: Optional[datetime] = None
     approved_by: Optional[int] = None
     approver: Optional[UserBrief] = None
     approved_at: Optional[datetime] = None
@@ -276,6 +278,12 @@ class RopaRecordListResponse(BaseModel):
     is_deleted: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    rejected_at: Optional[datetime] = None
+    rejected_by: Optional[UserBrief] = None
+    edit_reason: Optional[str] = None
+    edited_by: Optional[UserBrief] = None
+    edited_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

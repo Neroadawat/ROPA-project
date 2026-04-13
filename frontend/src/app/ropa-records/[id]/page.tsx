@@ -72,6 +72,7 @@ export default function RopaRecordDetailPage() {
         security_responsibility: data.security_responsibility ?? "",
         security_audit: data.security_audit ?? "",
         reason: "",
+        rejection_reason: data.rejection_reason ?? "",
       });
     } catch (err) {
       toast.error(err instanceof ApiError ? err.detail : "ไม่สามารถโหลดข้อมูลได้");
@@ -180,6 +181,17 @@ export default function RopaRecordDetailPage() {
         }
       />
       <div className="p-6 max-w-4xl">
+        {record.rejection_reason && (
+          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-950/20 p-4">
+            <p className="text-sm font-semibold text-red-400 mb-2">⚠️ เหตุผลการปฏิเสธ</p>
+            <p className="text-sm text-red-200">{record.rejection_reason}</p>
+            {record.rejected_by && record.rejected_at && (
+              <p className="text-xs text-red-300/70 mt-2">
+                ปฏิเสธโดย {record.rejected_by.name} เมื่อ {new Date(record.rejected_at).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })} {new Date(record.rejected_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} น.
+              </p>
+            )}
+          </div>
+        )}
         <div className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 backdrop-blur-sm p-6">
           <RopaForm
             form={form}
@@ -189,6 +201,7 @@ export default function RopaRecordDetailPage() {
             isSubmitting={isSubmitting}
             userRole={user?.role}
             userDepartmentId={user?.department_id ?? null}
+            recordStatus={record?.status}
             onSubmit={handleUpdate}
             onCancel={() => { setIsEditing(false); loadRecord(); }}
           />

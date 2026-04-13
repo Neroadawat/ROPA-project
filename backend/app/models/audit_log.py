@@ -1,14 +1,33 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey, JSON, func
+from sqlalchemy import String, Integer, DateTime, ForeignKey, JSON, func, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
+# Valid audit log actions
+VALID_AUDIT_ACTIONS = [
+    "create",
+    "update",
+    "delete",
+    "import",
+    "export",
+    "approve",
+    "approve_delete",
+    "reject",
+    "deactivate",
+]
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        CheckConstraint(
+            f"action IN ({', '.join(repr(a) for a in VALID_AUDIT_ACTIONS)})",
+            name="audit_logs_action_check",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)

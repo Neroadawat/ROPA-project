@@ -413,6 +413,12 @@ export interface RopaRecordListItem {
   is_deleted: boolean;
   created_at: string;
   updated_at: string | null;
+  rejection_reason: string | null;
+  rejected_at: string | null;
+  rejected_by: UserBrief | null;
+  edit_reason: string | null;
+  edited_by: UserBrief | null;
+  edited_at: string | null;
 }
 
 export interface PaginatedRopaList {
@@ -432,6 +438,8 @@ export interface RopaRecordDetail {
   role_type: string;
   status: string;
   rejection_reason: string | null;
+  rejected_by: UserBrief | null;
+  rejected_at: string | null;
   approved_by: number | null;
   approver: UserBrief | null;
   approved_at: string | null;
