@@ -147,7 +147,7 @@ export default function LoginPage() {
             {error && (
               <motion.div className="text-sm text-destructive bg-destructive/10 px-4 py-3 rounded-xl" role="alert" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}>{error}</motion.div>
             )}
-            <Button type="submit" className="w-full h-12 rounded-xl text-[15px] font-semibold cursor-pointer group" disabled={isLoading}>
+            <Button type="submit" className="w-full h-12 rounded-xl text-[15px] font-semibold cursor-pointer group bg-red-600 hover:bg-red-700 text-white" disabled={isLoading}>
               {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />กำลังเข้าสู่ระบบ...</>) : (<>เข้าสู่ระบบ<ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" /></>)}
             </Button>
           </form>

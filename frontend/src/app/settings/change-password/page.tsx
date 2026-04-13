@@ -96,8 +96,8 @@ export default function ChangePasswordPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <KeyRound className="h-5 w-5 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+                <KeyRound className="h-5 w-5 text-red-600" />
               </div>
               <div>
                 <CardTitle>เปลี่ยนรหัสผ่าน</CardTitle>
@@ -122,7 +122,7 @@ export default function ChangePasswordPage() {
                       setErrors((prev) => ({ ...prev, currentPassword: "" }));
                     }}
                     placeholder="กรอกรหัสผ่านปัจจุบัน"
-                    className="h-11 rounded-xl pr-10"
+                    className="h-11 rounded-xl pr-10 border-slate-300 focus-visible:border-red-500 focus-visible:ring-red-500/20"
                   />
                   <button
                     type="button"
@@ -155,7 +155,7 @@ export default function ChangePasswordPage() {
                       setErrors((prev) => ({ ...prev, newPassword: "" }));
                     }}
                     placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
-                    className="h-11 rounded-xl pr-10"
+                    className="h-11 rounded-xl pr-10 border-slate-300 focus-visible:border-red-500 focus-visible:ring-red-500/20"
                   />
                   <button
                     type="button"
@@ -188,7 +188,7 @@ export default function ChangePasswordPage() {
                       setErrors((prev) => ({ ...prev, confirmPassword: "" }));
                     }}
                     placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
-                    className="h-11 rounded-xl pr-10"
+                    className="h-11 rounded-xl pr-10 border-slate-300 focus-visible:border-red-500 focus-visible:ring-red-500/20"
                   />
                   <button
                     type="button"
@@ -209,12 +209,12 @@ export default function ChangePasswordPage() {
               </div>
 
               {/* Security tips */}
-              <div className="rounded-xl bg-muted/50 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                  <ShieldCheck className="h-4 w-4 text-red-500" />
                   คำแนะนำด้านความปลอดภัย
                 </div>
-                <ul className="text-xs text-muted-foreground space-y-1 ml-6 list-disc">
+                <ul className="text-xs text-slate-500 space-y-1 ml-6 list-disc">
                   <li>ใช้รหัสผ่านอย่างน้อย 8 ตัวอักษร</li>
                   <li>ผสมตัวอักษรพิมพ์ใหญ่ พิมพ์เล็ก ตัวเลข และอักขระพิเศษ</li>
                   <li>ไม่ควรใช้รหัสผ่านเดียวกับบริการอื่น</li>
@@ -224,7 +224,7 @@ export default function ChangePasswordPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 rounded-xl font-semibold"
+                className="w-full h-11 rounded-xl font-semibold bg-red-600 hover:bg-red-700 text-white"
               >
                 {isLoading ? (
                   <>
