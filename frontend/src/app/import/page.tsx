@@ -130,7 +130,7 @@ export default function ImportPage() {
         </div>
 
         {(viewMode === "upload" || viewMode === "preview") && !preview && (
-          <div className="rounded-2xl border border-dashed border-white/[0.1] p-12 text-center">
+          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg font-medium text-foreground mb-2">เลือกไฟล์ Excel เพื่อนำเข้า</p>
             <p className="text-sm text-muted-foreground mb-6">รองรับเฉพาะไฟล์ .xlsx เท่านั้น</p>
@@ -155,7 +155,7 @@ export default function ImportPage() {
           <div className="space-y-6">
             {/* Summary */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-muted-foreground">แถวทั้งหมด</p>
                 <p className="text-2xl font-bold text-foreground">{preview.total_rows}</p>
               </div>

@@ -74,8 +74,8 @@ export default function SuggestionLogsPage() {
       {detailLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDetailLog(null)} />
-          <div className="relative z-10 w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-white/[0.1] shadow-2xl shadow-black/40 mx-4 bg-[#0f172a]/95 backdrop-blur-xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]">
+          <div className="relative z-10 w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 shadow-xl mx-4 bg-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary" />
                 <h3 className="text-base font-semibold text-foreground">รายละเอียดการแนะนำ #{detailLog.id}</h3>

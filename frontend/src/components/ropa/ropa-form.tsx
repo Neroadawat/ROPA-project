@@ -117,7 +117,7 @@ function MultiSelect({ label, options, selected, onChange, readOnly }: {
             className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
               selected.includes(opt.id)
                 ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30"
-                : "bg-white/[0.05] text-slate-400 hover:bg-white/[0.1]"
+                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
             }`}>
             {opt.name}
           </button>
@@ -202,7 +202,7 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
         {sections.map((s) => (
           <button key={s.num} type="button" onClick={() => setSection(s.num)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              section === s.num ? "bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/25" : "text-slate-400 hover:bg-white/[0.05]"
+              section === s.num ? "bg-red-500/10 text-red-600 ring-1 ring-red-500/20" : "text-slate-500 hover:bg-slate-100"
             }`}>
             {s.num}. {s.label}
           </button>
@@ -449,7 +449,7 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
 
       {/* Navigation + Submit */}
       {!readOnly && (
-        <div className="flex items-center justify-between pt-4 border-t border-white/[0.08]">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-200">
           <div className="flex gap-2">
             {section > 1 && (
               <Button type="button" variant="outline" onClick={() => setSection(section - 1)} className="rounded-lg">

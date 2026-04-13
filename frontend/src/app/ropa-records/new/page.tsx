@@ -39,7 +39,6 @@ export default function NewRopaRecordPage() {
         data_source_direct: form.data_source_direct || undefined,
         data_source_other: form.data_source_other || undefined,
         legal_basis_thai: form.legal_basis_thai || undefined,
-        legal_basis_gdpr: form.legal_basis_gdpr || undefined,
         minor_consent_under_10: form.minor_consent_under_10 || undefined,
         minor_consent_10_20: form.minor_consent_10_20 || undefined,
         cross_border_transfer: form.cross_border_transfer ? form.cross_border_transfer === "true" : undefined,
@@ -80,7 +79,7 @@ export default function NewRopaRecordPage() {
     <DashboardLayout>
       <Header title="สร้าง ROPA Record ใหม่" description="กรอกข้อมูลทั้ง 8 ส่วนเพื่อสร้าง Record of Processing Activities" />
       <div className="p-6 max-w-4xl">
-        <div className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 backdrop-blur-sm p-6">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
           <RopaForm form={form} setForm={setForm} isSubmitting={isSubmitting} userRole={user?.role} userDepartmentId={user?.department_id ?? null} onSubmit={handleSubmit} onCancel={() => router.push("/ropa-records")} />
         </div>
       </div>

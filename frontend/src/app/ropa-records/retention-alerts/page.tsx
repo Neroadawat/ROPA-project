@@ -31,7 +31,7 @@ function AlertSection({ title, items = [], variant, icon, onView }: {
       </div>
       <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.08] bg-[#0f172a]/80 hover:bg-white/[0.03] transition-colors">
+          <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground text-sm">{item.activity_name || `Record #${item.id}`}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -99,7 +99,7 @@ export default function RetentionAlertsPage() {
             const cfg = URGENCY_CONFIG[key];
             const count = alerts?.[key]?.length ?? 0;
             return (
-              <div key={key} className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 p-4 text-center">
+              <div key={key} className="rounded-xl border border-slate-200 bg-white p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{count}</p>
                 <p className="text-xs text-muted-foreground mt-1">{cfg.label}</p>
               </div>

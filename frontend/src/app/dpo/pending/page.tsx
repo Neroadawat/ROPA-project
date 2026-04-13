@@ -200,7 +200,7 @@ export default function DpoPendingPage() {
       {rejectTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setRejectTarget(null); setRejectReason(""); }} />
-          <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-2xl shadow-black/40 mx-4 bg-[#0f172a]/95 backdrop-blur-xl">
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 p-6 shadow-xl mx-4 bg-white">
             <h3 className="text-base font-semibold text-foreground mb-2">ปฏิเสธ ROPA Record</h3>
             <p className="text-sm text-muted-foreground mb-4">
               ปฏิเสธ &quot;{rejectTarget.process_name || rejectTarget.activity_name || `Record #${rejectTarget.id}`}&quot;

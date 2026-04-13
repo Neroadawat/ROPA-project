@@ -100,7 +100,7 @@ export default function VersionHistoryPage() {
               className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-colors ${
                 selected.includes(v.id)
                   ? "border-blue-500/30 bg-blue-500/5"
-                  : "border-white/[0.08] bg-[#0f172a]/80 hover:bg-white/[0.03]"
+                  : "border-slate-200 bg-white hover:bg-slate-50"
               }`}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20">
@@ -124,7 +124,7 @@ export default function VersionHistoryPage() {
 
         {/* Comparison Result */}
         {comparison && (
-          <div className="rounded-xl border border-white/[0.08] bg-[#0f172a]/80 p-6 space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
             <h3 className="text-sm font-semibold text-foreground">
               เปรียบเทียบ: เวอร์ชัน {comparison.version_1.version_number} ↔ เวอร์ชัน {comparison.version_2.version_number}
             </h3>
