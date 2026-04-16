@@ -97,17 +97,6 @@ export default function LoginPage() {
               รวมศูนย์ข้อมูลกิจกรรมการประมวลผลข้อมูลส่วนบุคคล
               ให้เป็นระบบ ค้นหาได้ ตรวจสอบได้ ตาม PDPA
             </p>
-            <motion.div className="mt-10 p-5 rounded-2xl bg-white/[0.07] backdrop-blur-xl border border-white/10 max-w-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-white/80">ภาพรวมระบบ</p>
-                <span className="text-[10px] px-2 py-1 rounded-full bg-red-500/20 text-red-300 font-medium">Live</span>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[{ label: "ROPA Records", value: "—" }, { label: "แผนก", value: "—" }, { label: "Compliance", value: "—" }].map((s) => (
-                  <div key={s.label}><p className="text-2xl font-bold text-white">{s.value}</p><p className="text-[11px] text-white/40 mt-0.5">{s.label}</p></div>
-                ))}
-              </div>
-            </motion.div>
           </motion.div>
           <motion.div className="flex gap-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.7 }}>
             {[{ label: "PDPA Compliant", color: "bg-red-400" }, { label: "Audit Trail", color: "bg-rose-400" }, { label: "AI-Powered", color: "bg-orange-400" }].map((b) => (
