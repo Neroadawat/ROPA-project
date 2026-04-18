@@ -20,6 +20,11 @@ import {
 interface FormData { name: string; source_controller_id: string; address: string; email: string; phone: string; data_category: string; }
 const EMPTY_FORM: FormData = { name: "", source_controller_id: "", address: "", email: "", phone: "", data_category: "" };
 
+const DATA_CATEGORY_OPTIONS = [
+  { label: "ข้อมูลทั่วไป", value: "general" },
+  { label: "ข้อมูลอ่อนไหว", value: "sensitive" }
+];
+
 export default function ProcessorsPage() {
   const [processors, setProcessors] = useState<ProcessorData[]>([]);
   const [controllers, setControllers] = useState<ControllerData[]>([]);
@@ -108,7 +113,10 @@ export default function ProcessorsPage() {
       </div>
     )},
     { key: "source_controller_id", label: "Controller ต้นทาง", render: (item) => <span className="text-sm text-muted-foreground">{getControllerName(item.source_controller_id)}</span> },
-    { key: "data_category", label: "หมวดข้อมูล", render: (item) => <span className="text-sm text-muted-foreground">{item.data_category || "-"}</span> },
+    { key: "data_category", label: "หมวดข้อมูล", render: (item) => {
+      const displayLabel = DATA_CATEGORY_OPTIONS.find(opt => opt.value === item.data_category)?.label || item.data_category || "-";
+      return <span className="text-sm text-muted-foreground">{displayLabel}</span>;
+    } },
     { key: "is_active", label: "สถานะ", render: (item) => <StatusBadge variant={item.is_active ? "success" : "default"} dot>{item.is_active ? "ใช้งาน" : "ปิดใช้งาน"}</StatusBadge> },
     { key: "created_at", label: "สร้างเมื่อ", sortable: true, render: (item) => <span className="text-muted-foreground text-xs">{new Date(item.created_at).toLocaleDateString("th-TH")}</span> },
   ];
@@ -143,7 +151,15 @@ export default function ProcessorsPage() {
           <div className="space-y-2"><Label htmlFor="proc-address">ที่อยู่</Label><Input id="proc-address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="ที่อยู่" className="h-10 rounded-lg" /></div>
           <div className="space-y-2"><Label htmlFor="proc-email">อีเมล</Label><Input id="proc-email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="h-10 rounded-lg" /></div>
           <div className="space-y-2"><Label htmlFor="proc-phone">โทรศัพท์</Label><Input id="proc-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="0xx-xxx-xxxx" className="h-10 rounded-lg" /></div>
-          <div className="space-y-2"><Label htmlFor="proc-category">หมวดข้อมูล</Label><Input id="proc-category" value={form.data_category} onChange={(e) => setForm((f) => ({ ...f, data_category: e.target.value }))} placeholder="เช่น ข้อมูลส่วนบุคคล" className="h-10 rounded-lg" /></div>
+          <div className="space-y-2">
+            <Label htmlFor="proc-category">หมวดข้อมูล</Label>
+            <select id="proc-category" value={form.data_category} onChange={(e) => setForm((f) => ({ ...f, data_category: e.target.value }))} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground">
+              <option value="">-- เลือกหมวดข้อมูล --</option>
+              {DATA_CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </FormModal>
       <ConfirmDialog open={!!deleteTarget} title="ปิดใช้งาน Processor" description={`คุณต้องการปิดใช้งาน "${deleteTarget?.name}" ใช่หรือไม่? Processor ที่ถูกอ้างอิงโดย ROPA Records จะไม่สามารถปิดใช้งานได้`} confirmLabel="ปิดใช้งาน" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
