@@ -2,20 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get("access_token")?.value;
+    // Read token from Authorization header (frontend sends it from localStorage)
+    const authHeader = request.headers.get("Authorization");
     const url = new URL(request.url);
     const searchParams = url.searchParams;
 
-    // Build query string
     const queryString = searchParams.toString();
-    const backendUrl = `http://localhost:8000/api/departments${queryString ? `?${queryString}` : ""}`;
+    const backendUrl = `http://127.0.0.1:8000/api/departments${queryString ? `?${queryString}` : ""}`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(backendUrl, {
