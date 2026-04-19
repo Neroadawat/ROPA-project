@@ -739,8 +739,17 @@ export interface ImportRowError {
   error_reason: string;
 }
 
+export interface ImportRowData {
+  sheet_name: string;
+  row_number: number;
+  role_type: string;
+  activity_name?: string;
+  purpose?: string;
+  [key: string]: unknown;
+}
+
 export interface ImportPreviewData {
-  valid_rows: Record<string, unknown>[];
+  valid_rows: ImportRowData[];
   errors: ImportRowError[];
   total_rows: number;
   valid_count: number;
@@ -758,14 +767,24 @@ export interface ImportBatchData {
   created_at: string;
 }
 
-async function requestFile<T>(path: string, file: File): Promise<T> {
+async function requestFile<T>(path: string, file: File, params?: Record<string, string | number>): Promise<T> {
   const token = getToken();
   const formData = new FormData();
   formData.append("file", file);
+  
+  let finalPath = path;
+  if (params && Object.keys(params).length > 0) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      query.set(key, String(value));
+    });
+    finalPath = `${path}?${query.toString()}`;
+  }
+  
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST", headers, body: formData });
+  const res = await fetch(`${API_BASE}${finalPath}`, { method: "POST", headers, body: formData });
   if (!res.ok) {
     let detail = "เกิดข้อผิดพลาด";
     try { const body = await res.json(); detail = body.detail || detail; } catch {}
@@ -781,7 +800,12 @@ async function requestFile<T>(path: string, file: File): Promise<T> {
 
 export const importApi = {
   preview: (file: File) => requestFile<ImportPreviewData>("/api/import/preview", file),
-  confirm: (file: File) => requestFile<ImportBatchData>("/api/import/confirm", file),
+  confirm: (file: File, departmentId?: number) => 
+    requestFile<ImportBatchData>(
+      "/api/import/confirm",
+      file,
+      departmentId ? { department_id: departmentId } : undefined
+    ),
   listBatches: (params?: { page?: number; per_page?: number }) => {
     const q = new URLSearchParams();
     if (params?.page) q.set("page", String(params.page));

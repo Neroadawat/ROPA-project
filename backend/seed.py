@@ -40,21 +40,27 @@ def seed():
 
     db = SessionLocal()
     try:
+        # Create departments
+        departments = []
         for dept_data in DEPARTMENTS:
-            db.add(Department(**dept_data))
+            dept = Department(**dept_data)
+            db.add(dept)
+            departments.append(dept)
             print(f"Created department: {dept_data['name']}")
         db.commit()
 
+        # Create admin user with first department assigned
         admin = User(
             email=ADMIN_EMAIL,
             hashed_password=hash_password(ADMIN_PASSWORD),
             name="Admin",
             role="Admin",
             is_active=True,
+            department_id=departments[0].id,  # Assign to first department (IT)
         )
         db.add(admin)
         db.commit()
-        print(f"Created admin user: {ADMIN_EMAIL}")
+        print(f"Created admin user: {ADMIN_EMAIL} (Department: {departments[0].name})")
 
         print("Seed completed successfully!")
     finally:

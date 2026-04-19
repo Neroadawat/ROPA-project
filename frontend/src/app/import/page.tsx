@@ -7,13 +7,19 @@ import { Header } from "@/components/layout/header";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, History } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, History, ChevronDown, ChevronRight, AlertCircle, Info } from "lucide-react";
 import {
   importApi, usersApi, ApiError,
-  type ImportPreviewData, type ImportRowError, type ImportBatchData, type UserData,
+  type ImportPreviewData, type ImportRowError, type ImportBatchData, type UserData, type ImportRowData,
 } from "@/lib/api";
 
 type ViewMode = "upload" | "preview" | "history";
+
+interface DepartmentData {
+  id: number;
+  name: string;
+  code: string;
+}
 
 export default function ImportPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("upload");
@@ -21,21 +27,30 @@ export default function ImportPage() {
   const [preview, setPreview] = useState<ImportPreviewData | null>(null);
   const [batches, setBatches] = useState<ImportBatchData[]>([]);
   const [usersMap, setUsersMap] = useState<Record<number, UserData>>({});
+  const [departments, setDepartments] = useState<DepartmentData[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({});
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBatches = useCallback(async () => {
     try {
-      const [batchRes, usersRes] = await Promise.all([
+      const [batchRes, usersRes, deptRes] = await Promise.all([
         importApi.listBatches({ per_page: 100 }),
         usersApi.list({ per_page: 100 }),
+        fetch("/api/departments").then(r => r.json()).catch(() => ({ items: [] })),
       ]);
       setBatches(batchRes.items);
       const map: Record<number, UserData> = {};
       usersRes.items.forEach((u) => { map[u.id] = u; });
       setUsersMap(map);
+      
+      const depts = deptRes.items || [];
+      setDepartments(depts);
+      setSelectedDepartment(prev => prev || (depts.length > 0 ? depts[0].id : null));
     } catch (err) {
       toast.error(err instanceof ApiError ? err.detail : "ไม่สามารถโหลดข้อมูลได้");
     }
@@ -60,23 +75,30 @@ export default function ImportPage() {
       const result = await importApi.preview(file);
       setPreview(result);
       setViewMode("preview");
+      // Initialize expanded sheets
+      const sheets = new Set(result.valid_rows.map(r => r.sheet_name));
+      result.errors.forEach(e => sheets.add(e.sheet_name));
+      const expanded: Record<string, boolean> = {};
+      sheets.forEach(s => { expanded[s] = true; });
+      setExpandedSheets(expanded);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.detail : "ไม่สามารถอ่านไฟล์ได้");
     } finally { setUploading(false); }
   };
 
   const handleConfirm = async () => {
-    if (!file) return;
+    if (!file || !selectedDepartment) return;
     setConfirming(true);
     try {
-      const result = await importApi.confirm(file);
+      const result = await importApi.confirm(file, selectedDepartment);
       toast.success(`นำเข้าสำเร็จ ${result.rows_success} แถว`);
       setPreview(null);
       setFile(null);
       setViewMode("history");
       fetchBatches();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.detail : "เกิดข้อผิดพลาดในการนำเข้า");
+      const errorMsg = err instanceof ApiError ? err.detail : "เกิดข้อผิดพลาดในการนำเข้า";
+      toast.error(errorMsg);
     } finally { setConfirming(false); }
   };
 
@@ -89,12 +111,43 @@ export default function ImportPage() {
 
   const getUserName = (userId: number) => usersMap[userId]?.name ?? `User #${userId}`;
 
-  const errorColumns: Column<ImportRowError>[] = [
-    { key: "sheet_name", label: "ชีต", render: (item) => <span className="text-sm font-medium">{item.sheet_name}</span> },
-    { key: "row_number", label: "แถว", render: (item) => <span className="text-sm text-muted-foreground">{item.row_number}</span> },
-    { key: "field_name", label: "ฟิลด์", render: (item) => <span className="text-sm font-mono text-primary">{item.field_name}</span> },
-    { key: "error_reason", label: "สาเหตุ", render: (item) => <span className="text-sm text-destructive">{item.error_reason}</span> },
-  ];
+  // Helper functions for preview analysis
+  const getSheetStats = (preview: ImportPreviewData) => {
+    const stats: Record<string, { valid: number; errors: number; roles: string[] }> = {};
+    
+    preview.valid_rows.forEach(row => {
+      if (!stats[row.sheet_name]) {
+        stats[row.sheet_name] = { valid: 0, errors: 0, roles: [] };
+      }
+      stats[row.sheet_name].valid++;
+      if (!stats[row.sheet_name].roles.includes(row.role_type)) {
+        stats[row.sheet_name].roles.push(row.role_type);
+      }
+    });
+
+    preview.errors.forEach(err => {
+      if (!stats[err.sheet_name]) {
+        stats[err.sheet_name] = { valid: 0, errors: 0, roles: [] };
+      }
+      stats[err.sheet_name].errors++;
+    });
+
+    return stats;
+  };
+
+  const getErrorsBySheet = (errors: ImportRowError[]) => {
+    const grouped: Record<string, Record<number, ImportRowError[]>> = {};
+    errors.forEach(err => {
+      if (!grouped[err.sheet_name]) grouped[err.sheet_name] = {};
+      if (!grouped[err.sheet_name][err.row_number]) grouped[err.sheet_name][err.row_number] = [];
+      grouped[err.sheet_name][err.row_number].push(err);
+    });
+    return grouped;
+  };
+
+  const getRowContext = (sheet: string, rowNum: number, rows: ImportRowData[]) => {
+    return rows.find(r => r.sheet_name === sheet && r.row_number === rowNum);
+  };
 
   const batchColumns: Column<ImportBatchData>[] = [
     { key: "id", label: "#", className: "w-[60px]", render: (item) => <span className="text-muted-foreground text-xs">#{item.id}</span> },
@@ -130,30 +183,55 @@ export default function ImportPage() {
         </div>
 
         {(viewMode === "upload" || viewMode === "preview") && !preview && (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-            <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-foreground mb-2">เลือกไฟล์ Excel เพื่อนำเข้า</p>
-            <p className="text-sm text-muted-foreground mb-6">รองรับเฉพาะไฟล์ .xlsx เท่านั้น</p>
-            <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" id="file-upload" />
-            <div className="flex items-center justify-center gap-3">
-              <label htmlFor="file-upload" className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                <FileSpreadsheet className="h-4 w-4" />เลือกไฟล์
+          <div className="space-y-4">
+            {/* Department Selector */}
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <label className="text-sm font-semibold text-blue-900 block mb-2">
+                เลือกแผนกสำหรับการนำเข้า
               </label>
-              {file && (
-                <>
-                  <span className="text-sm text-muted-foreground">{file.name}</span>
-                  <Button onClick={handlePreview} disabled={uploading} className="rounded-lg gap-1.5">
-                    {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังอ่าน...</> : "ตรวจสอบข้อมูล"}
-                  </Button>
-                </>
+              <select
+                value={selectedDepartment || ""}
+                onChange={(e) => setSelectedDepartment(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- เลือกแผนก --</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name} ({dept.code})
+                  </option>
+                ))}
+              </select>
+              {!selectedDepartment && (
+                <p className="text-xs text-blue-700 mt-2">⚠️ ต้องเลือกแผนกก่อนทำการนำเข้า</p>
               )}
+            </div>
+
+            {/* File Upload */}
+            <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+              <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-foreground mb-2">เลือกไฟล์ Excel เพื่อนำเข้า</p>
+              <p className="text-sm text-muted-foreground mb-6">รองรับเฉพาะไฟล์ .xlsx เท่านั้น</p>
+              <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" id="file-upload" />
+              <div className="flex items-center justify-center gap-3">
+                <label htmlFor="file-upload" className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                  <FileSpreadsheet className="h-4 w-4" />เลือกไฟล์
+                </label>
+                {file && (
+                  <>
+                    <span className="text-sm text-muted-foreground">{file.name}</span>
+                    <Button onClick={handlePreview} disabled={uploading} className="rounded-lg gap-1.5">
+                      {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังอ่าน...</> : "ตรวจสอบข้อมูล"}
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
 
         {viewMode === "preview" && preview && (
           <div className="space-y-6">
-            {/* Summary */}
+            {/* Summary Statistics */}
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-muted-foreground">แถวทั้งหมด</p>
@@ -169,21 +247,142 @@ export default function ImportPage() {
               </div>
             </div>
 
-            {/* Errors */}
+            {/* Sheet Mapping */}
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-blue-500" />
+                  ภาพรวมการนำเข้าต่อชีต
+                </h3>
+              </div>
+              <div className="divide-y divide-slate-200">
+                {Object.entries(getSheetStats(preview)).map(([sheetName, stats]) => (
+                  <div key={sheetName} className="px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-foreground">{sheetName}</h4>
+                        <p className="text-sm text-muted-foreground">{stats.roles.join(" + ")} • {stats.valid + stats.errors} แถว</p>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">ถูกต้อง</p>
+                          <p className="text-lg font-semibold text-emerald-400">{stats.valid}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">ข้อผิดพลาด</p>
+                          <p className="text-lg font-semibold text-destructive">{stats.errors}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Error Details by Sheet */}
             {preview.errors.length > 0 && (
-              <div>
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="h-4 w-4 text-amber-400" />
-                  <h3 className="text-sm font-semibold text-foreground">รายการข้อผิดพลาด</h3>
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  <h3 className="text-sm font-semibold text-foreground">รายละเอียดข้อผิดพลาด ({preview.error_count} รายการ)</h3>
                 </div>
-                <DataTable columns={errorColumns} data={preview.errors} pageSize={5} emptyMessage="ไม่มีข้อผิดพลาด" searchPlaceholder="ค้นหา..." searchKeys={["field_name", "error_reason"]} />
+                <div className="space-y-3">
+                  {Object.entries(getErrorsBySheet(preview.errors)).map(([sheetName, rowErrors]) => (
+                    <div key={sheetName} className="rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
+                      <button
+                        onClick={() => setExpandedSheets(prev => ({ ...prev, [sheetName]: !prev[sheetName] }))}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-amber-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          {expandedSheets[sheetName] ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                          <span className="font-medium text-amber-900">ชีต "{sheetName}"</span>
+                          <span className="ml-2 inline-block px-2 py-1 rounded-full bg-amber-200 text-xs font-semibold text-amber-900">
+                            {Object.keys(rowErrors).length} แถวที่มีข้อผิดพลาด
+                          </span>
+                        </div>
+                      </button>
+
+                      {expandedSheets[sheetName] && (
+                        <div className="border-t border-amber-200 divide-y divide-amber-200">
+                          {Object.entries(rowErrors).map(([rowNum, errors]) => {
+                            const rowContext = getRowContext(sheetName, parseInt(rowNum), preview.valid_rows);
+                            const activityName = rowContext?.activity_name || "(ไม่มีชื่อกิจกรรม)";
+                            const rowKey = `${sheetName}-${rowNum}`;
+                            return (
+                              <div key={rowKey} className="px-6 py-3 bg-white">
+                                <button
+                                  onClick={() => setExpandedRows(prev => ({ ...prev, [rowKey]: !prev[rowKey] }))}
+                                  className="w-full flex items-start justify-between hover:bg-amber-50 p-2 rounded -mx-2 transition-colors"
+                                >
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      {expandedRows[rowKey] ? <ChevronDown className="h-4 w-4 flex-shrink-0 mt-0.5" /> : <ChevronRight className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+                                      <span className="text-sm font-medium text-foreground">แถวที่ {rowNum}</span>
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">{errors.length} ปัญหา</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 ml-6">{activityName}</p>
+                                  </div>
+                                </button>
+
+                                {expandedRows[rowKey] && (
+                                  <div className="ml-6 mt-3 pt-3 border-t border-slate-200 space-y-2">
+                                    {errors.map((err, idx) => (
+                                      <div key={idx} className="text-sm">
+                                        <div className="flex items-start gap-2">
+                                          <AlertCircle className="h-3.5 w-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                                          <div className="flex-1">
+                                            <p className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-primary">{err.field_name}</p>
+                                            <p className="text-xs text-destructive mt-1">{err.error_reason}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Valid Rows Preview */}
+            {preview.valid_count > 0 && preview.valid_count <= 10 && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  ตัวอย่างแถวที่จะนำเข้า ({preview.valid_count} แถว)
+                </h3>
+                <div className="space-y-3">
+                  {preview.valid_rows.slice(0, 5).map((row, idx) => (
+                    <div key={idx} className="bg-white rounded p-3 border border-emerald-200">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-xs text-muted-foreground">ชีต/บทบาท</span>
+                          <p className="font-medium">{row.sheet_name} • {row.role_type}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">กิจกรรม</span>
+                          <p className="font-medium">{row.activity_name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {preview.valid_count > 5 && (
+                    <p className="text-xs text-muted-foreground text-center">... และอีก {preview.valid_count - 5} แถว</p>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
               <Button variant="outline" onClick={handleCancel} className="rounded-lg">ยกเลิก</Button>
-              <Button onClick={handleConfirm} disabled={confirming || preview.valid_count === 0} className="rounded-lg gap-1.5">
+              <Button onClick={handleConfirm} disabled={confirming || preview.valid_count === 0} className="rounded-lg gap-1.5 bg-emerald-600 hover:bg-emerald-700">
                 {confirming ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังนำเข้า...</> : <><CheckCircle2 className="h-4 w-4" />ยืนยันนำเข้า ({preview.valid_count} แถว)</>}
               </Button>
             </div>

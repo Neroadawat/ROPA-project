@@ -1,4 +1,4 @@
-"""Import service for parsing and importing ROPA records from Excel files."""
+"""Import service for parsing and importing ROPA records from Thai Excel form."""
 
 from datetime import date, datetime
 from io import BytesIO
@@ -14,71 +14,90 @@ from app.models.department import Department
 from app.models.import_batch import ImportBatch
 from app.models.personal_data_type import PersonalDataType
 from app.models.processor import Processor
+from app.models.record_version import RecordVersion
 from app.models.ropa_data_subject import RopaDataSubject
 from app.models.ropa_personal_data_type import RopaPersonalDataType
 from app.models.ropa_record import RopaRecord
+from app.models.user import User
 from app.schemas.import_export import ImportPreviewResponse, ImportRowData, ImportRowError
 from app.services.audit_service import log_action
 
 
-# Column headers that indicate a Processor sheet (has processor-specific columns)
-PROCESSOR_INDICATORS = {"processor_name", "source_controller", "data_category"}
-
-# Column mapping: Excel header → model field
-COLUMN_MAP = {
-    "activity_name": "activity_name",
-    "department": "department",
-    "purpose": "purpose",
-    "risk_level": "risk_level",
-    "data_subject_categories": "data_subject_categories",
-    "personal_data_types": "personal_data_types",
-    "data_acquisition_method": "data_acquisition_method",
-    "data_source_direct": "data_source_direct",
-    "data_source_other": "data_source_other",
-    "legal_basis_thai": "legal_basis_thai",
-    "minor_consent_under_10": "minor_consent_under_10",
-    "minor_consent_10_20": "minor_consent_10_20",
-    "cross_border_transfer": "cross_border_transfer",
-    "cross_border_affiliate": "cross_border_affiliate",
-    "cross_border_method": "cross_border_method",
-    "cross_border_standard": "cross_border_standard",
-    "cross_border_exception": "cross_border_exception",
-    "retention_period": "retention_period",
-    "retention_expiry_date": "retention_expiry_date",
-    "next_review_date": "next_review_date",
-    "storage_type": "storage_type",
-    "storage_method": "storage_method",
-    "access_rights": "access_rights",
-    "deletion_method": "deletion_method",
-    "data_owner": "data_owner",
-    "third_party_recipients": "third_party_recipients",
-    "disclosure_exemption": "disclosure_exemption",
-    "rights_refusal": "rights_refusal",
-    "security_organizational": "security_organizational",
-    "security_technical": "security_technical",
-    "security_physical": "security_physical",
-    "security_access_control": "security_access_control",
-    "security_responsibility": "security_responsibility",
-    "security_audit": "security_audit",
-    # Processor-specific
-    "controller_name": "controller_name",
-    "processor_name": "processor_name",
-    "source_controller": "source_controller",
-    "data_category": "data_category",
+# Thai column indices (1-based) based on ROPA_Form.xlsx structure
+# Maps to 8 sections of ROPA form per requirements
+THAI_COLUMN_MAP = {
+    # Section 0: Metadata
+    "seq": 1,                          # ลำดับ
+    "controller_name": 2,              # 1. ชื่อเจ้าของข้อมูล / ควบคุมข้อมูล / ประมวลผล
+    
+    # Section 1: Basic Information
+    "activity_name": 3,                # 2. กิจกรรมประมวลผล
+    "purpose": 4,                      # 3. วัตถุประสงค์ของการประมวลผล
+    "personal_data_types": 5,          # 4. ข้อมูลส่วนบุคคลที่จัดเก็บ
+    "data_subject_categories": 6,      # 5. หมวดหมู่ของข้อมูล
+    "data_type_general": 7,            # 6. ประเภทของข้อมูล (ทั่วไป/ข้อมูลอ่อนไหว)
+    
+    # Section 2: Data Source
+    "data_acquisition_method": 8,      # 7. วิธีการได้มาซึ่งข้อมูล (hard copy/soft file)
+    "data_source_direct": 9,           # 8. แหล่งที่ได้มา - จากเจ้าของข้อมูลโดยตรง
+    "data_source_other": 10,           # 8. แหล่งที่ได้มา - จากแหล่งอื่น
+    
+    # Section 3: Legal Basis
+    "legal_basis_thai": 11,            # 9. ฐานในการประมวลผล (ตาม PDPA)
+    
+    # Section 4: Minor Consent
+    "minor_consent_under_10": 12,      # 10. การขอความยินยอม - อายุไม่เกิน 10 ปี
+    "minor_consent_10_20": 13,         # 10. การขอความยินยอม - อายุ 10-20 ปี
+    
+    # Section 5: Cross-Border Transfer
+    "cross_border_transfer": 14,       # 11. ส่งหรือโอนต่างประเทศ (Y/N)
+    "cross_border_affiliate": 15,      # 11. เป็นการส่งของกลุ่มบริษัท (ชื่อบริษัท)
+    "cross_border_method": 16,         # 11. วิธีการโอนข้อมูล
+    "cross_border_standard": 17,       # 11. มาตรฐานการคุ้มครอง (ของประเทศปลายทาง)
+    "cross_border_exception": 18,      # 11. ข้อยกเว้นตามมาตรา 28 (เลขที่)
+    
+    # Section 6: Retention Policy
+    "storage_type": 19,                # 12. ประเภทการเก็บรักษา (soft file/hard copy)
+    "storage_method": 20,              # 12. วิธีการเก็บรักษา (เข้ารหัส/ใส่แฟ้ม/etc)
+    
+    # Extended columns for remaining fields (flexible mapping)
+    # These columns may or may not exist depending on form version
+    "access_rights": 21,               # ผู้ที่มีสิทธิเข้าถึง
+    "deletion_method": 22,             # วิธีการลบข้อมูล
+    "data_owner": 23,                  # เจ้าของข้อมูล / ผู้รับผิดชอบ
+    "third_party_recipients": 24,      # ผู้รับข้อมูลบุคคลที่สาม
+    "disclosure_exemption": 25,        # ข้อยกเว้นจากการเปิดเผย
+    "rights_refusal": 26,              # การปฏิเสธสิทธิ
+    "retention_period": 27,            # ระยะเวลาเก็บรักษา
+    "retention_expiry_date": 28,       # วันครบกำหนดเก็บรักษา
+    "next_review_date": 29,            # วันรีวิวครั้งต่อไป
+    "security_organizational": 30,     # มาตรการเชิงองค์กร
+    "security_technical": 31,          # มาตรการเชิงเทคนิค
+    "security_physical": 32,           # มาตรการทางกายภาพ
+    "security_access_control": 33,     # มาตรการการควบคุมการเข้าถึง
+    "security_responsibility": 34,     # ผู้รับผิดชอบด้านความปลอดภัย
+    "security_audit": 35,              # การตรวจสอบและติดตาม
 }
 
 
-def _normalize_header(header: str) -> str:
-    """Normalize a column header to a snake_case key."""
-    return header.strip().lower().replace(" ", "_").replace("-", "_")
-
-
-def _detect_sheet_type(headers: list[str]) -> str:
-    """Detect whether a sheet is Controller or Processor based on column headers."""
-    normalized = {_normalize_header(h) for h in headers if h}
-    if normalized & PROCESSOR_INDICATORS:
+def _detect_sheet_type(ws: Worksheet) -> str:
+    """
+    Detect whether a sheet is Controller or Processor.
+    Check sheet name and data pattern.
+    """
+    sheet_name = ws.title.lower()
+    if "processor" in sheet_name:
         return "Processor"
     return "Controller"
+
+
+def _get_cell_value(row, col_idx: int) -> Optional[str]:
+    """Get cell value at 1-based column index (col_idx: 1 = column A, 2 = column B)."""
+    if col_idx > len(row):
+        return None
+    cell = row[col_idx - 1]  # Convert to 0-based index
+    return _cell_str(cell.value)
+
 
 
 def _parse_bool(value: Optional[str]) -> Optional[bool]:
@@ -150,153 +169,130 @@ def _build_lookup_maps(db: Session) -> dict:
 
 
 def _validate_row(
-    row_data: dict,
+    row,
     row_number: int,
     sheet_name: str,
     role_type: str,
     lookups: dict,
 ) -> tuple[Optional[ImportRowData], list[ImportRowError]]:
-    """Validate a single row and return parsed data or errors."""
+    """Validate a single row using fixed Thai column positions.
+    
+    Handles flexible column mapping - if column doesn't exist, treats as None.
+    """
     errors: list[ImportRowError] = []
 
-    # Required: activity_name
-    activity_name = _cell_str(row_data.get("activity_name"))
+    # Helper to safely get column value (returns None if column out of range)
+    def get_col(col_idx: int) -> Optional[str]:
+        if col_idx <= len(row):
+            return _get_cell_value(row, col_idx)
+        return None
+
+    # Extract all values - columns that don't exist return None
+    activity_name = get_col(THAI_COLUMN_MAP["activity_name"])
+    controller_name = get_col(THAI_COLUMN_MAP["controller_name"])
+    purpose = get_col(THAI_COLUMN_MAP["purpose"])
+    personal_data_desc = get_col(THAI_COLUMN_MAP["personal_data_types"])
+    data_subject_desc = get_col(THAI_COLUMN_MAP["data_subject_categories"])
+    data_type_general = get_col(THAI_COLUMN_MAP["data_type_general"])
+    data_acq_method = get_col(THAI_COLUMN_MAP["data_acquisition_method"])
+    data_src_direct = get_col(THAI_COLUMN_MAP["data_source_direct"])
+    data_src_other = get_col(THAI_COLUMN_MAP["data_source_other"])
+    legal_basis = get_col(THAI_COLUMN_MAP["legal_basis_thai"])
+    minor_under_10 = get_col(THAI_COLUMN_MAP["minor_consent_under_10"])
+    minor_10_20 = get_col(THAI_COLUMN_MAP["minor_consent_10_20"])
+    cross_border_str = get_col(THAI_COLUMN_MAP["cross_border_transfer"])
+    cross_border_affiliate = get_col(THAI_COLUMN_MAP["cross_border_affiliate"])
+    cross_border_method = get_col(THAI_COLUMN_MAP["cross_border_method"])
+    cross_border_std = get_col(THAI_COLUMN_MAP["cross_border_standard"])
+    cross_border_exc = get_col(THAI_COLUMN_MAP["cross_border_exception"])
+    storage_type = get_col(THAI_COLUMN_MAP["storage_type"])
+    storage_method = get_col(THAI_COLUMN_MAP["storage_method"])
+    
+    # Extended fields (Section 6, 7, 8)
+    access_rights = get_col(THAI_COLUMN_MAP["access_rights"])
+    deletion_method = get_col(THAI_COLUMN_MAP["deletion_method"])
+    data_owner = get_col(THAI_COLUMN_MAP["data_owner"])
+    third_party_recipients = get_col(THAI_COLUMN_MAP["third_party_recipients"])
+    disclosure_exemption = get_col(THAI_COLUMN_MAP["disclosure_exemption"])
+    rights_refusal = get_col(THAI_COLUMN_MAP["rights_refusal"])
+    retention_period = get_col(THAI_COLUMN_MAP["retention_period"])
+    retention_expiry_date_raw = row[THAI_COLUMN_MAP["retention_expiry_date"] - 1] if THAI_COLUMN_MAP["retention_expiry_date"] <= len(row) else None
+    next_review_date_raw = row[THAI_COLUMN_MAP["next_review_date"] - 1] if THAI_COLUMN_MAP["next_review_date"] <= len(row) else None
+    security_org = get_col(THAI_COLUMN_MAP["security_organizational"])
+    security_tech = get_col(THAI_COLUMN_MAP["security_technical"])
+    security_phys = get_col(THAI_COLUMN_MAP["security_physical"])
+    security_access = get_col(THAI_COLUMN_MAP["security_access_control"])
+    security_resp = get_col(THAI_COLUMN_MAP["security_responsibility"])
+    security_audit = get_col(THAI_COLUMN_MAP["security_audit"])
+
+    # Validate required fields
     if not activity_name:
         errors.append(ImportRowError(
             sheet_name=sheet_name, row_number=row_number,
-            field_name="activity_name", error_reason="activity_name is required",
+            field_name="activity_name", error_reason="กิจกรรมประมวลผล (column 3) is required",
         ))
 
-    # Required: department (match by name or code)
-    dept_val = _cell_str(row_data.get("department"))
+    # Department lookup: Try to infer from controller name or set to None
+    # In flexible mode, department is optional for import (can be assigned later)
     department_id = None
-    if not dept_val:
-        errors.append(ImportRowError(
-            sheet_name=sheet_name, row_number=row_number,
-            field_name="department", error_reason="department is required",
-        ))
-    else:
-        dept_lower = dept_val.lower()
-        dept = lookups["dept_by_name"].get(dept_lower) or lookups["dept_by_code"].get(dept_lower)
-        if not dept:
-            errors.append(ImportRowError(
-                sheet_name=sheet_name, row_number=row_number,
-                field_name="department", error_reason=f"Department '{dept_val}' not found",
-            ))
-        else:
-            department_id = dept.id
 
-    # risk_level validation
-    risk_level = _cell_str(row_data.get("risk_level"))
-    if risk_level and risk_level not in ("Low", "Medium", "High"):
-        errors.append(ImportRowError(
-            sheet_name=sheet_name, row_number=row_number,
-            field_name="risk_level", error_reason=f"risk_level must be Low, Medium, or High (got '{risk_level}')",
-        ))
-
-    # cross_border_transfer
-    cbt_raw = _cell_str(row_data.get("cross_border_transfer"))
+    # Parse cross_border_transfer as boolean
     cross_border_transfer = None
-    if cbt_raw is not None:
-        cross_border_transfer = _parse_bool(cbt_raw)
-        if cross_border_transfer is None:
-            errors.append(ImportRowError(
-                sheet_name=sheet_name, row_number=row_number,
-                field_name="cross_border_transfer",
-                error_reason=f"cross_border_transfer must be Y/N/Yes/No/True/False (got '{cbt_raw}')",
-            ))
+    if cross_border_str:
+        if "มี" in cross_border_str or "yes" in cross_border_str.lower() or "ü" in cross_border_str or "✓" in cross_border_str:
+            cross_border_transfer = True
+        elif "ไม่" in cross_border_str or "no" in cross_border_str.lower():
+            cross_border_transfer = False
 
-    # Date fields
-    retention_expiry_date = None
-    red_raw = row_data.get("retention_expiry_date")
-    if red_raw is not None:
-        retention_expiry_date = _parse_date(red_raw)
-        if retention_expiry_date is None and _cell_str(red_raw):
-            errors.append(ImportRowError(
-                sheet_name=sheet_name, row_number=row_number,
-                field_name="retention_expiry_date",
-                error_reason=f"Invalid date format for retention_expiry_date",
-            ))
-
-    next_review_date = None
-    nrd_raw = row_data.get("next_review_date")
-    if nrd_raw is not None:
-        next_review_date = _parse_date(nrd_raw)
-        if next_review_date is None and _cell_str(nrd_raw):
-            errors.append(ImportRowError(
-                sheet_name=sheet_name, row_number=row_number,
-                field_name="next_review_date",
-                error_reason=f"Invalid date format for next_review_date",
-            ))
-
-    # Data subject categories (comma-separated names)
-    ds_ids: list[int] = []
-    ds_raw = _cell_str(row_data.get("data_subject_categories"))
-    if ds_raw:
-        for name in ds_raw.split(","):
-            name = name.strip()
-            if not name:
-                continue
-            ds = lookups["ds_by_name"].get(name.lower())
-            if ds:
-                ds_ids.append(ds.id)
-            else:
-                errors.append(ImportRowError(
-                    sheet_name=sheet_name, row_number=row_number,
-                    field_name="data_subject_categories",
-                    error_reason=f"Data subject category '{name}' not found",
-                ))
-
-    # Personal data types (comma-separated names)
-    pdt_ids: list[int] = []
-    pdt_raw = _cell_str(row_data.get("personal_data_types"))
-    if pdt_raw:
-        for name in pdt_raw.split(","):
-            name = name.strip()
-            if not name:
-                continue
-            pdt = lookups["pdt_by_name"].get(name.lower())
-            if pdt:
-                pdt_ids.append(pdt.id)
-            else:
-                errors.append(ImportRowError(
-                    sheet_name=sheet_name, row_number=row_number,
-                    field_name="personal_data_types",
-                    error_reason=f"Personal data type '{name}' not found",
-                ))
-
-    # Controller/Processor lookup
+    # Detect controller/processor
     controller_id = None
     processor_id = None
-    if role_type == "Controller":
-        ctrl_name = _cell_str(row_data.get("controller_name"))
-        if ctrl_name:
-            ctrl = lookups["ctrl_by_name"].get(ctrl_name.lower())
-            if ctrl:
-                controller_id = ctrl.id
-            else:
-                errors.append(ImportRowError(
-                    sheet_name=sheet_name, row_number=row_number,
-                    field_name="controller_name",
-                    error_reason=f"Controller '{ctrl_name}' not found",
-                ))
-    else:  # Processor
-        proc_name = _cell_str(row_data.get("processor_name"))
-        if proc_name:
-            proc = lookups["proc_by_name"].get(proc_name.lower())
-            if proc:
-                processor_id = proc.id
-            else:
-                errors.append(ImportRowError(
-                    sheet_name=sheet_name, row_number=row_number,
-                    field_name="processor_name",
-                    error_reason=f"Processor '{proc_name}' not found",
-                ))
+    
+    if role_type == "Controller" and controller_name:
+        ctrl = lookups["ctrl_by_name"].get(controller_name.lower())
+        if ctrl:
+            controller_id = ctrl.id
+        # In flexible mode, don't error if controller not found - log as warning
+    elif role_type == "Processor" and controller_name:
+        proc = lookups["proc_by_name"].get(controller_name.lower())
+        if proc:
+            processor_id = proc.id
+
+    # Parse data subject categories (comma-separated or using Thai text)
+    ds_ids: list[int] = []
+    if data_subject_desc:
+        categories = ["พนักงาน", "ลูกค้า", "คู่ค้า", "ผู้ติดต่อ", "ผู้สมัคร", "สมาชิก", "อื่น"]
+        for cat in categories:
+            if cat in data_subject_desc:
+                ds = lookups["ds_by_name"].get(cat.lower())
+                if ds:
+                    ds_ids.append(ds.id)
+
+    # Parse personal data types (comma-separated or using Thai text)
+    pdt_ids: list[int] = []
+    if personal_data_desc:
+        pdt_keywords = ["ชื่อ", "นามสกุล", "เบอร์โทร", "อีเมล", "ที่อยู่", "เลขประจำตัว", 
+                       "ข้อมูลธนาคาร", "วันเดือนปี", "บัญชี", "บัตร", "รหัส", "สุขภาพ", 
+                       "ศาสนา", "ประวัติ", "ภาพถ่าย", "ลายนิ้วมือ"]
+        for keyword in pdt_keywords:
+            if keyword in personal_data_desc:
+                pdt = lookups["pdt_by_name"].get(keyword.lower())
+                if pdt:
+                    pdt_ids.append(pdt.id)
+
+    # Parse date fields
+    retention_expiry_date = None
+    if retention_expiry_date_raw is not None:
+        retention_expiry_date = _parse_date(retention_expiry_date_raw.value if hasattr(retention_expiry_date_raw, 'value') else retention_expiry_date_raw)
+
+    next_review_date = None
+    if next_review_date_raw is not None:
+        next_review_date = _parse_date(next_review_date_raw.value if hasattr(next_review_date_raw, 'value') else next_review_date_raw)
 
     if errors:
         return None, errors
 
-    row = ImportRowData(
+    row_data = ImportRowData(
         sheet_name=sheet_name,
         row_number=row_number,
         role_type=role_type,
@@ -306,38 +302,38 @@ def _validate_row(
         data_subject_category_ids=ds_ids,
         personal_data_type_ids=pdt_ids,
         activity_name=activity_name,
-        purpose=_cell_str(row_data.get("purpose")),
-        risk_level=risk_level,
-        data_acquisition_method=_cell_str(row_data.get("data_acquisition_method")),
-        data_source_direct=_cell_str(row_data.get("data_source_direct")),
-        data_source_other=_cell_str(row_data.get("data_source_other")),
-        legal_basis_thai=_cell_str(row_data.get("legal_basis_thai")),
-        minor_consent_under_10=_cell_str(row_data.get("minor_consent_under_10")),
-        minor_consent_10_20=_cell_str(row_data.get("minor_consent_10_20")),
+        purpose=purpose,
+        risk_level=None,  # Not directly from form - can be inferred/set later
+        data_acquisition_method=data_acq_method,
+        data_source_direct=data_src_direct,
+        data_source_other=data_src_other,
+        legal_basis_thai=legal_basis,
+        minor_consent_under_10=minor_under_10,
+        minor_consent_10_20=minor_10_20,
         cross_border_transfer=cross_border_transfer,
-        cross_border_affiliate=_cell_str(row_data.get("cross_border_affiliate")),
-        cross_border_method=_cell_str(row_data.get("cross_border_method")),
-        cross_border_standard=_cell_str(row_data.get("cross_border_standard")),
-        cross_border_exception=_cell_str(row_data.get("cross_border_exception")),
-        retention_period=_cell_str(row_data.get("retention_period")),
+        cross_border_affiliate=cross_border_affiliate,
+        cross_border_method=cross_border_method,
+        cross_border_standard=cross_border_std,
+        cross_border_exception=cross_border_exc,
+        retention_period=retention_period,
         retention_expiry_date=retention_expiry_date,
         next_review_date=next_review_date,
-        storage_type=_cell_str(row_data.get("storage_type")),
-        storage_method=_cell_str(row_data.get("storage_method")),
-        access_rights=_cell_str(row_data.get("access_rights")),
-        deletion_method=_cell_str(row_data.get("deletion_method")),
-        data_owner=_cell_str(row_data.get("data_owner")),
-        third_party_recipients=_cell_str(row_data.get("third_party_recipients")),
-        disclosure_exemption=_cell_str(row_data.get("disclosure_exemption")),
-        rights_refusal=_cell_str(row_data.get("rights_refusal")),
-        security_organizational=_cell_str(row_data.get("security_organizational")),
-        security_technical=_cell_str(row_data.get("security_technical")),
-        security_physical=_cell_str(row_data.get("security_physical")),
-        security_access_control=_cell_str(row_data.get("security_access_control")),
-        security_responsibility=_cell_str(row_data.get("security_responsibility")),
-        security_audit=_cell_str(row_data.get("security_audit")),
+        storage_type=storage_type,
+        storage_method=storage_method,
+        access_rights=access_rights,
+        deletion_method=deletion_method,
+        data_owner=data_owner,
+        third_party_recipients=third_party_recipients,
+        disclosure_exemption=disclosure_exemption,
+        rights_refusal=rights_refusal,
+        security_organizational=security_org,
+        security_technical=security_tech,
+        security_physical=security_phys,
+        security_access_control=security_access,
+        security_responsibility=security_resp,
+        security_audit=security_audit,
     )
-    return row, errors
+    return row_data, []
 
 
 def _parse_sheet(
@@ -345,36 +341,52 @@ def _parse_sheet(
     sheet_name: str,
     lookups: dict,
 ) -> tuple[list[ImportRowData], list[ImportRowError]]:
-    """Parse a single worksheet and return valid rows + errors."""
+    """Parse a Thai ROPA form worksheet.
+    
+    Thai form structure:
+    - Rows 1-4+ are headers (varying by sheet)
+    - Data rows start after headers
+    - Find first data row by looking for sequence number in column 1
+    """
     rows = list(ws.iter_rows(values_only=False))
     if not rows:
         return [], []
 
-    # Read headers from first row
-    headers = [_cell_str(cell.value) for cell in rows[0]]
-    if not any(headers):
-        return [], []
-
-    normalized_headers = [_normalize_header(h) if h else None for h in headers]
-    role_type = _detect_sheet_type([h for h in headers if h])
+    role_type = _detect_sheet_type(ws)
 
     valid_rows: list[ImportRowData] = []
     all_errors: list[ImportRowError] = []
 
-    for row_idx, row in enumerate(rows[1:], start=2):  # row 2 onwards (1-indexed, header is row 1)
-        row_data: dict = {}
-        has_data = False
-        for col_idx, cell in enumerate(row):
-            if col_idx < len(normalized_headers) and normalized_headers[col_idx]:
-                key = COLUMN_MAP.get(normalized_headers[col_idx], normalized_headers[col_idx])
-                row_data[key] = cell.value
-                if cell.value is not None:
-                    has_data = True
+    # Find the first data row (skip headers by looking for numeric sequence number in column 1)
+    first_data_row = None
+    for row_idx, row in enumerate(rows):
+        if row_idx < 3:  # Skip first 3 rows (definitely headers)
+            continue
+        
+        seq_cell = row[0] if len(row) > 0 else None
+        if seq_cell and seq_cell.value is not None:
+            # Try to convert to int to find row with sequence number
+            try:
+                int(seq_cell.value)
+                first_data_row = row_idx
+                break
+            except (ValueError, TypeError):
+                continue
+    
+    # If no sequence number found, start from row 5 (0-indexed row 4)
+    if first_data_row is None:
+        first_data_row = 4
 
-        if not has_data:
+    # Parse data rows
+    for row_idx, row in enumerate(rows[first_data_row:], start=first_data_row + 1):
+        # Check if row has any data in key columns
+        seq_val = _get_cell_value(row, THAI_COLUMN_MAP["seq"])
+        activity_val = _get_cell_value(row, THAI_COLUMN_MAP["activity_name"])
+        
+        if not seq_val and not activity_val:
             continue  # Skip empty rows
 
-        parsed, errors = _validate_row(row_data, row_idx, sheet_name, role_type, lookups)
+        parsed, errors = _validate_row(row, row_idx, sheet_name, role_type, lookups)
         if parsed:
             valid_rows.append(parsed)
         all_errors.extend(errors)
@@ -383,7 +395,7 @@ def _parse_sheet(
 
 
 def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
-    """Parse an Excel file and return a preview with valid rows and errors."""
+    """Parse a Thai ROPA form Excel file and return a preview with valid rows and errors."""
     wb = load_workbook(filename=BytesIO(file_content), read_only=False, data_only=True)
     lookups = _build_lookup_maps(db)
 
@@ -396,12 +408,15 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
         valid, errors = _parse_sheet(ws, sheet_name, lookups)
         all_valid.extend(valid)
         all_errors.extend(errors)
-        # Count data rows (exclude header)
-        data_row_count = sum(
-            1 for row in ws.iter_rows(min_row=2, values_only=True)
-            if any(v is not None for v in row)
-        )
-        total_rows += data_row_count
+        
+        # Count data rows by looking for rows with sequence numbers
+        for row in ws.iter_rows(values_only=True):
+            if row and row[0] is not None:
+                try:
+                    int(row[0])
+                    total_rows += 1
+                except (ValueError, TypeError):
+                    continue
 
     wb.close()
 
@@ -419,8 +434,21 @@ def confirm_import(
     file_content: bytes,
     filename: str,
     user_id: int,
+    target_department_id: Optional[int] = None,
 ) -> ImportBatch:
-    """Re-parse the file and import only valid rows, creating ROPA records."""
+    """
+    Re-parse the file and import only valid rows, creating ROPA records.
+    
+    Args:
+        db: Database session
+        file_content: Excel file bytes
+        filename: Original filename
+        user_id: User performing import
+        target_department_id: Explicit department ID to use (overrides inference)
+    
+    Raises:
+        ValueError: If department_id cannot be determined for import
+    """
     wb = load_workbook(filename=BytesIO(file_content), read_only=False, data_only=True)
     lookups = _build_lookup_maps(db)
 
@@ -438,28 +466,59 @@ def confirm_import(
     rows_success = 0
     rows_failed = len(all_errors)
 
+    # Determine default department for rows without one
+    default_dept_id = None
+    
+    # Priority 1: Explicit target department
+    if target_department_id:
+        default_dept_id = target_department_id
+    # Priority 2: Current user's department
+    else:
+        current_user = db.query(User).filter(User.id == user_id).first()
+        if current_user and current_user.department_id:
+            default_dept_id = current_user.department_id
+    
+    # Ensure we have a department to use
+    if not default_dept_id:
+        raise ValueError(
+            "ไม่สามารถระบุแผนกสำหรับการนำเข้าได้\n\n"
+            "กรุณาระบุ department_id ในการร้องขอ หรือ\n"
+            "ตั้งค่า department ให้กับผู้ใช้ที่ทำการนำเข้า\n\n"
+            "คำแนะนำ: POST /api/import/confirm?department_id=1 -F file=@form.xlsx"
+        )
+
     for row in all_valid:
+        # Use row's department if available, otherwise use default
+        dept_id = row.department_id or default_dept_id
+
         record = RopaRecord(
-            department_id=row.department_id,
+            department_id=dept_id,
             created_by=user_id,
             role_type=row.role_type,
-            status="pending_approval",
+            status="pending_approval",  # Always start as pending approval per requirements
+            is_deleted=False,  # Newly imported records are not deleted
             controller_id=row.controller_id,
             processor_id=row.processor_id,
+            # Section 1: Basic Information
             activity_name=row.activity_name,
             purpose=row.purpose,
             risk_level=row.risk_level,
+            # Section 2: Data Source
             data_acquisition_method=row.data_acquisition_method,
             data_source_direct=row.data_source_direct,
             data_source_other=row.data_source_other,
+            # Section 3: Legal Basis
             legal_basis_thai=row.legal_basis_thai,
-            minor_consent_under_10=row.minor_consent_under_10,
-            minor_consent_10_20=row.minor_consent_10_20,
+            # Section 4: Minor Consent (not applicable for Processor)
+            minor_consent_under_10=row.minor_consent_under_10 if row.role_type == "Controller" else None,
+            minor_consent_10_20=row.minor_consent_10_20 if row.role_type == "Controller" else None,
+            # Section 5: Cross-Border Transfer
             cross_border_transfer=row.cross_border_transfer,
             cross_border_affiliate=row.cross_border_affiliate,
             cross_border_method=row.cross_border_method,
             cross_border_standard=row.cross_border_standard,
             cross_border_exception=row.cross_border_exception,
+            # Section 6: Retention Policy
             retention_period=row.retention_period,
             retention_expiry_date=row.retention_expiry_date,
             next_review_date=row.next_review_date,
@@ -467,10 +526,12 @@ def confirm_import(
             storage_method=row.storage_method,
             access_rights=row.access_rights,
             deletion_method=row.deletion_method,
+            # Section 7: Data Usage/Disclosure
             data_owner=row.data_owner,
             third_party_recipients=row.third_party_recipients,
             disclosure_exemption=row.disclosure_exemption,
             rights_refusal=row.rights_refusal,
+            # Section 8: Security Measures
             security_organizational=row.security_organizational,
             security_technical=row.security_technical,
             security_physical=row.security_physical,
@@ -481,13 +542,35 @@ def confirm_import(
         db.add(record)
         db.flush()
 
-        # Junction tables
+        # Link many-to-many relationships (deduplicate IDs)
         for ds_id in set(row.data_subject_category_ids):
             db.add(RopaDataSubject(ropa_record_id=record.id, data_subject_category_id=ds_id))
+        
         for pdt_id in set(row.personal_data_type_ids):
             db.add(RopaPersonalDataType(ropa_record_id=record.id, personal_data_type_id=pdt_id))
 
+        # Create initial version record (version 1)
+        db.add(RecordVersion(
+            ropa_record_id=record.id,
+            version_number=1,
+            changed_by=user_id,
+            change_reason="Imported from Excel file",
+            snapshot={
+                "activity_name": record.activity_name,
+                "purpose": record.purpose,
+                "role_type": record.role_type,
+                "status": record.status,
+            },
+        ))
+
         rows_success += 1
+
+    # Commit all changes
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
 
     # Create ImportBatch record
     error_details = None
@@ -524,9 +607,11 @@ def confirm_import(
             "rows_failed": rows_failed,
             "status": batch_status,
         },
-        reason=f"Imported {rows_success} ROPA records from {filename}",
+        reason=f"Imported {rows_success} ROPA records from {filename}" + 
+               (f" ({rows_failed} errors)" if rows_failed > 0 else ""),
     )
 
+    db.commit()
     return batch
 
 

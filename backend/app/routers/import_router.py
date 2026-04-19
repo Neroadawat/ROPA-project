@@ -37,10 +37,18 @@ async def import_preview(
 @router.post("/confirm", response_model=ImportBatchResponse)
 async def import_confirm(
     file: UploadFile = File(...),
+    department_id: int = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    """Re-upload the same file to confirm import. Only valid rows are imported."""
+    """Re-upload the same file to confirm import. Only valid rows are imported.
+    
+    Args:
+        file: Excel file to import
+        department_id: Optional department to assign to imported records (auto-inferred if not provided)
+        db: Database session
+        current_user: Current authenticated user (must be admin)
+    """
     if not file.filename or not file.filename.endswith(".xlsx"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -49,7 +57,18 @@ async def import_confirm(
 
     content = await file.read()
     try:
-        batch = import_service.confirm_import(db, content, file.filename, current_user.id)
+        batch = import_service.confirm_import(
+            db,
+            content,
+            file.filename,
+            current_user.id,
+            target_department_id=department_id,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
