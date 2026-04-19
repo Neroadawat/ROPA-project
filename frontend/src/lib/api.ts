@@ -739,10 +739,21 @@ export interface ImportRowError {
   error_reason: string;
 }
 
+export interface ControllerProcessorOption {
+  id: number;
+  name: string;
+  type: "controller" | "processor";
+  is_active: boolean;
+}
+
 export interface ImportRowData {
   sheet_name: string;
   row_number: number;
   role_type: string;
+  controller_id?: number | null;
+  processor_id?: number | null;
+  controller_name?: string | null;
+  processor_name?: string | null;
   activity_name?: string;
   purpose?: string;
   [key: string]: unknown;
@@ -754,6 +765,8 @@ export interface ImportPreviewData {
   total_rows: number;
   valid_count: number;
   error_count: number;
+  controller_options: ControllerProcessorOption[];
+  processor_options: ControllerProcessorOption[];
 }
 
 export interface ImportBatchData {

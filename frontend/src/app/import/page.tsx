@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, History, ChevronDown, ChevronRight, AlertCircle, Info } from "lucide-react";
 import {
-  importApi, usersApi, ApiError,
+  importApi, usersApi, departmentsApi, ApiError,
   type ImportPreviewData, type ImportRowError, type ImportBatchData, type UserData, type ImportRowData,
 } from "@/lib/api";
 
@@ -34,6 +34,9 @@ export default function ImportPage() {
   const [confirming, setConfirming] = useState(false);
   const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({});
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  // Store selected controller/processor IDs for each row
+  const [rowControllerMapping, setRowControllerMapping] = useState<Record<string, number | null>>({});
+  const [rowProcessorMapping, setRowProcessorMapping] = useState<Record<string, number | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBatches = useCallback(async () => {
@@ -41,7 +44,7 @@ export default function ImportPage() {
       const [batchRes, usersRes, deptRes] = await Promise.all([
         importApi.listBatches({ per_page: 100 }),
         usersApi.list({ per_page: 100 }),
-        fetch("/api/departments").then(r => r.json()).catch(() => ({ items: [] })),
+        departmentsApi.list({ per_page: 100 }),
       ]);
       setBatches(batchRes.items);
       const map: Record<number, UserData> = {};
@@ -279,6 +282,94 @@ export default function ImportPage() {
               </div>
             </div>
 
+            {/* Valid Rows Preview Section */}
+            {preview.valid_count > 0 && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  ตัวอย่างแถวที่จะนำเข้า ({preview.valid_count} แถว)
+                </h3>
+                <div className="space-y-4">
+                  {preview.valid_rows.slice(0, 10).map((row, idx) => {
+                    const rowKey = `${row.sheet_name}-${row.row_number}`;
+                    const controllerValue = rowControllerMapping[rowKey] !== undefined ? rowControllerMapping[rowKey] : row.controller_id;
+                    const processorValue = rowProcessorMapping[rowKey] !== undefined ? rowProcessorMapping[rowKey] : row.processor_id;
+                    
+                    return (
+                      <div key={idx} className="bg-white rounded p-4 border border-emerald-200 space-y-3">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-xs text-muted-foreground">ชีต</span>
+                            <p className="font-medium">{row.sheet_name}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">บทบาท</span>
+                            <p className="font-medium">{row.role_type}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">กิจกรรม</span>
+                            <p className="font-medium">{row.activity_name || "-"}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">วัตถุประสงค์</span>
+                            <p className="font-medium text-sm">{row.purpose ? row.purpose.substring(0, 100) : "-"}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Controller/Processor Selector */}
+                        {row.role_type === "Controller" && (
+                          <div className="border-t border-emerald-100 pt-3">
+                            <label className="text-xs text-muted-foreground block mb-1">
+                              เจ้าของข้อมูล: {row.controller_name || "(ไม่ระบุ)"}
+                            </label>
+                            <select
+                              value={controllerValue || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setRowControllerMapping(prev => ({ ...prev, [rowKey]: val }));
+                              }}
+                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">-- เลือก/ตรวจสอบเจ้าของข้อมูล --</option>
+                              {preview.controller_options.filter(c => c.is_active).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                              <option value="NEW">+ สร้างเจ้าของข้อมูลใหม่</option>
+                            </select>
+                          </div>
+                        )}
+                        
+                        {row.role_type === "Processor" && (
+                          <div className="border-t border-emerald-100 pt-3">
+                            <label className="text-xs text-muted-foreground block mb-1">
+                              ผู้ประมวลผล: {row.processor_name || "(ไม่ระบุ)"}
+                            </label>
+                            <select
+                              value={processorValue || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setRowProcessorMapping(prev => ({ ...prev, [rowKey]: val }));
+                              }}
+                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">-- เลือก/ตรวจสอบผู้ประมวลผล --</option>
+                              {preview.processor_options.filter(p => p.is_active).map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                              <option value="NEW">+ สร้างผู้ประมวลผลใหม่</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {preview.valid_count > 10 && (
+                    <p className="text-xs text-muted-foreground text-center bg-white rounded p-2">... และอีก {preview.valid_count - 10} แถว</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Error Details by Sheet */}
             {preview.errors.length > 0 && (
               <div className="space-y-4">
@@ -351,29 +442,88 @@ export default function ImportPage() {
             )}
 
             {/* Valid Rows Preview */}
-            {preview.valid_count > 0 && preview.valid_count <= 10 && (
+            {preview.valid_count > 0 && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
                 <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   ตัวอย่างแถวที่จะนำเข้า ({preview.valid_count} แถว)
                 </h3>
-                <div className="space-y-3">
-                  {preview.valid_rows.slice(0, 5).map((row, idx) => (
-                    <div key={idx} className="bg-white rounded p-3 border border-emerald-200">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-xs text-muted-foreground">ชีต/บทบาท</span>
-                          <p className="font-medium">{row.sheet_name} • {row.role_type}</p>
+                <div className="space-y-4">
+                  {preview.valid_rows.slice(0, 10).map((row, idx) => {
+                    const rowKey = `${row.sheet_name}-${row.row_number}`;
+                    const controllerValue = rowControllerMapping[rowKey] !== undefined ? rowControllerMapping[rowKey] : row.controller_id;
+                    const processorValue = rowProcessorMapping[rowKey] !== undefined ? rowProcessorMapping[rowKey] : row.processor_id;
+                    
+                    return (
+                      <div key={idx} className="bg-white rounded p-4 border border-emerald-200 space-y-3">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-xs text-muted-foreground">ชีต</span>
+                            <p className="font-medium">{row.sheet_name}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">บทบาท</span>
+                            <p className="font-medium">{row.role_type}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">กิจกรรม</span>
+                            <p className="font-medium">{row.activity_name || "-"}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">วัตถุประสงค์</span>
+                            <p className="font-medium text-sm">{row.purpose ? row.purpose.substring(0, 100) : "-"}</p>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground">กิจกรรม</span>
-                          <p className="font-medium">{row.activity_name}</p>
-                        </div>
+                        
+                        {/* Controller/Processor Selector */}
+                        {row.role_type === "Controller" && (
+                          <div className="border-t border-emerald-100 pt-3">
+                            <label className="text-xs text-muted-foreground block mb-1">
+                              เจ้าของข้อมูล: {row.controller_name || "(ไม่ระบุ)"}
+                            </label>
+                            <select
+                              value={controllerValue || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setRowControllerMapping(prev => ({ ...prev, [rowKey]: val }));
+                              }}
+                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">-- เลือก/ตรวจสอบเจ้าของข้อมูล --</option>
+                              {preview.controller_options.filter(c => c.is_active).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                              <option value="NEW">+ สร้างเจ้าของข้อมูลใหม่</option>
+                            </select>
+                          </div>
+                        )}
+                        
+                        {row.role_type === "Processor" && (
+                          <div className="border-t border-emerald-100 pt-3">
+                            <label className="text-xs text-muted-foreground block mb-1">
+                              ผู้ประมวลผล: {row.processor_name || "(ไม่ระบุ)"}
+                            </label>
+                            <select
+                              value={processorValue || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setRowProcessorMapping(prev => ({ ...prev, [rowKey]: val }));
+                              }}
+                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">-- เลือก/ตรวจสอบผู้ประมวลผล --</option>
+                              {preview.processor_options.filter(p => p.is_active).map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                              <option value="NEW">+ สร้างผู้ประมวลผลใหม่</option>
+                            </select>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                  {preview.valid_count > 5 && (
-                    <p className="text-xs text-muted-foreground text-center">... และอีก {preview.valid_count - 5} แถว</p>
+                    );
+                  })}
+                  {preview.valid_count > 10 && (
+                    <p className="text-xs text-muted-foreground text-center bg-white rounded p-2">... และอีก {preview.valid_count - 10} แถว</p>
                   )}
                 </div>
               </div>

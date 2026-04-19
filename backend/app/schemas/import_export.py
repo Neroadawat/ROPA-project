@@ -4,6 +4,14 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
+class ControllerProcessorOption(BaseModel):
+    """Option for controller or processor."""
+    id: int
+    name: str
+    type: str  # "controller" or "processor"
+    is_active: bool
+
+
 class ImportRowError(BaseModel):
     """A single validation error for an import row."""
     sheet_name: str
@@ -20,6 +28,8 @@ class ImportRowData(BaseModel):
     department_id: Optional[int] = None
     controller_id: Optional[int] = None
     processor_id: Optional[int] = None
+    controller_name: Optional[str] = None  # Name from Excel (for matching/display)
+    processor_name: Optional[str] = None   # Name from Excel (for matching/display)
     data_subject_category_ids: list[int] = []
     personal_data_type_ids: list[int] = []
 
@@ -36,8 +46,6 @@ class ImportRowData(BaseModel):
     # Section 3
     legal_basis_thai: Optional[str] = None
     legal_basis_gdpr: Optional[str] = None
-    minor_consent_under_10: Optional[str] = None
-    minor_consent_10_20: Optional[str] = None
 
     # Section 4
     cross_border_transfer: Optional[bool] = None
@@ -48,8 +56,6 @@ class ImportRowData(BaseModel):
 
     # Section 5
     retention_period: Optional[str] = None
-    retention_expiry_date: Optional[date] = None
-    next_review_date: Optional[date] = None
     storage_type: Optional[str] = None
     storage_method: Optional[str] = None
     access_rights: Optional[str] = None
@@ -57,17 +63,6 @@ class ImportRowData(BaseModel):
 
     # Section 6
     data_owner: Optional[str] = None
-    third_party_recipients: Optional[str] = None
-    disclosure_exemption: Optional[str] = None
-    rights_refusal: Optional[str] = None
-
-    # Section 7
-    security_organizational: Optional[str] = None
-    security_technical: Optional[str] = None
-    security_physical: Optional[str] = None
-    security_access_control: Optional[str] = None
-    security_responsibility: Optional[str] = None
-    security_audit: Optional[str] = None
 
 
 class ImportPreviewResponse(BaseModel):
@@ -77,6 +72,8 @@ class ImportPreviewResponse(BaseModel):
     total_rows: int
     valid_count: int
     error_count: int
+    controller_options: list[ControllerProcessorOption] = []
+    processor_options: list[ControllerProcessorOption] = []
 
 
 class ImportConfirmRequest(BaseModel):

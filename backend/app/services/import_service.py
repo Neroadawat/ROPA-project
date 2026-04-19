@@ -24,59 +24,47 @@ from app.services.audit_service import log_action
 
 
 # Thai column indices (1-based) based on ROPA_Form.xlsx structure
-# Maps to 8 sections of ROPA form per requirements
+# Only includes columns that exist in the actual Excel file
+# Data starts from row 15 (header in row 12-13)
 THAI_COLUMN_MAP = {
-    # Section 0: Metadata
+    # Section 0: Metadata & Row ID
     "seq": 1,                          # ลำดับ
-    "controller_name": 2,              # 1. ชื่อเจ้าของข้อมูล / ควบคุมข้อมูล / ประมวลผล
     
-    # Section 1: Basic Information
-    "activity_name": 3,                # 2. กิจกรรมประมวลผล
-    "purpose": 4,                      # 3. วัตถุประสงค์ของการประมวลผล
-    "personal_data_types": 5,          # 4. ข้อมูลส่วนบุคคลที่จัดเก็บ
-    "data_subject_categories": 6,      # 5. หมวดหมู่ของข้อมูล
-    "data_type_general": 7,            # 6. ประเภทของข้อมูล (ทั่วไป/ข้อมูลอ่อนไหว)
+    # Section 1: Identity
+    "controller_name": 2,              # 1. ชื่อผู้ประมวลผล/ควบคุม
+    "address": 3,                      # 2. ที่อยู่ (for reference only)
     
-    # Section 2: Data Source
-    "data_acquisition_method": 8,      # 7. วิธีการได้มาซึ่งข้อมูล (hard copy/soft file)
-    "data_source_direct": 9,           # 8. แหล่งที่ได้มา - จากเจ้าของข้อมูลโดยตรง
-    "data_source_other": 10,           # 8. แหล่งที่ได้มา - จากแหล่งอื่น
+    # Section 2: Activity & Purpose
+    "activity_name": 4,                # 3. กิจกรรมประมวลผล
+    "purpose": 5,                      # 4. วัตถุประสงค์ของการประมวลผล
     
-    # Section 3: Legal Basis
-    "legal_basis_thai": 11,            # 9. ฐานในการประมวลผล (ตาม PDPA)
+    # Section 3: Data Categories
+    "personal_data_types": 6,          # 5. ข้อมูลส่วนบุคคลที่จัดเก็บ
+    "data_subject_categories": 7,      # 6. หมวดหมู่ของข้อมูล
+    "data_type_general": 8,            # 7. ประเภทของข้อมูล (ทั่วไป/อ่อนไหว)
     
-    # Section 4: Minor Consent
-    "minor_consent_under_10": 12,      # 10. การขอความยินยอม - อายุไม่เกิน 10 ปี
-    "minor_consent_10_20": 13,         # 10. การขอความยินยอม - อายุ 10-20 ปี
+    # Section 4: Data Source
+    "data_acquisition_method": 9,      # 8. วิธีการได้มา
+    "data_source_direct": 10,          # 9. แหล่งที่ได้มา - จากเจ้าของตรง
+    "data_source_other": 10,           # 9. แหล่งที่ได้มา - จากแหล่งอื่น (same col, row 13)
     
-    # Section 5: Cross-Border Transfer
-    "cross_border_transfer": 14,       # 11. ส่งหรือโอนต่างประเทศ (Y/N)
-    "cross_border_affiliate": 15,      # 11. เป็นการส่งของกลุ่มบริษัท (ชื่อบริษัท)
-    "cross_border_method": 16,         # 11. วิธีการโอนข้อมูล
-    "cross_border_standard": 17,       # 11. มาตรฐานการคุ้มครอง (ของประเทศปลายทาง)
-    "cross_border_exception": 18,      # 11. ข้อยกเว้นตามมาตรา 28 (เลขที่)
+    # Section 5: Legal Basis
+    "legal_basis_thai": 12,            # 10. ฐานในการประมวลผล
     
-    # Section 6: Retention Policy
-    "storage_type": 19,                # 12. ประเภทการเก็บรักษา (soft file/hard copy)
-    "storage_method": 20,              # 12. วิธีการเก็บรักษา (เข้ารหัส/ใส่แฟ้ม/etc)
+    # Section 6: Cross-border Transfer
+    "cross_border_transfer": 13,       # 11. ส่งหรือโอนต่างประเทศ
+    "cross_border_affiliate": 14,      # 11. เป็นการส่งกลุ่มบริษัท
+    "cross_border_method": 15,         # 11. วิธีการโอน
+    "cross_border_standard": 16,       # 11. มาตรฐานการคุ้มครอง
+    "cross_border_exception": 17,      # 11. ข้อยกเว้นมาตรา 28
     
-    # Extended columns for remaining fields (flexible mapping)
-    # These columns may or may not exist depending on form version
-    "access_rights": 21,               # ผู้ที่มีสิทธิเข้าถึง
-    "deletion_method": 22,             # วิธีการลบข้อมูล
-    "data_owner": 23,                  # เจ้าของข้อมูล / ผู้รับผิดชอบ
-    "third_party_recipients": 24,      # ผู้รับข้อมูลบุคคลที่สาม
-    "disclosure_exemption": 25,        # ข้อยกเว้นจากการเปิดเผย
-    "rights_refusal": 26,              # การปฏิเสธสิทธิ
-    "retention_period": 27,            # ระยะเวลาเก็บรักษา
-    "retention_expiry_date": 28,       # วันครบกำหนดเก็บรักษา
-    "next_review_date": 29,            # วันรีวิวครั้งต่อไป
-    "security_organizational": 30,     # มาตรการเชิงองค์กร
-    "security_technical": 31,          # มาตรการเชิงเทคนิค
-    "security_physical": 32,           # มาตรการทางกายภาพ
-    "security_access_control": 33,     # มาตรการการควบคุมการเข้าถึง
-    "security_responsibility": 34,     # ผู้รับผิดชอบด้านความปลอดภัย
-    "security_audit": 35,              # การตรวจสอบและติดตาม
+    # Additional fields (columns may not all exist)
+    "storage_type": 18,
+    "storage_method": 19,
+    "access_rights": 20,
+    "deletion_method": 21,
+    "data_owner": 22,
+    "retention_period": 23,
 }
 
 
@@ -140,17 +128,25 @@ def _cell_str(value) -> Optional[str]:
     return s if s else None
 
 
+def _normalize_name(name: Optional[str]) -> str:
+    """Normalize a name for matching: strip whitespace, lowercase, remove extra spaces."""
+    if not name:
+        return ""
+    # Remove leading/trailing whitespace, convert to lowercase, collapse multiple spaces
+    return " ".join(str(name).strip().lower().split())
+
+
 def _build_lookup_maps(db: Session) -> dict:
     """Build lookup maps for departments, controllers, processors, data subjects, personal data types."""
     departments = db.query(Department).filter(Department.is_active == True).all()
-    dept_by_name = {d.name.lower(): d for d in departments}
+    dept_by_name = {_normalize_name(d.name): d for d in departments}
     dept_by_code = {d.code.lower(): d for d in departments}
 
     controllers = db.query(Controller).filter(Controller.is_active == True).all()
-    ctrl_by_name = {c.name.lower(): c for c in controllers}
+    ctrl_by_name = {_normalize_name(c.name): c for c in controllers}
 
     processors = db.query(Processor).filter(Processor.is_active == True).all()
-    proc_by_name = {p.name.lower(): p for p in processors}
+    proc_by_name = {_normalize_name(p.name): p for p in processors}
 
     ds_categories = db.query(DataSubjectCategory).all()
     ds_by_name = {d.name.lower(): d for d in ds_categories}
@@ -198,32 +194,17 @@ def _validate_row(
     data_src_direct = get_col(THAI_COLUMN_MAP["data_source_direct"])
     data_src_other = get_col(THAI_COLUMN_MAP["data_source_other"])
     legal_basis = get_col(THAI_COLUMN_MAP["legal_basis_thai"])
-    minor_under_10 = get_col(THAI_COLUMN_MAP["minor_consent_under_10"])
-    minor_10_20 = get_col(THAI_COLUMN_MAP["minor_consent_10_20"])
     cross_border_str = get_col(THAI_COLUMN_MAP["cross_border_transfer"])
     cross_border_affiliate = get_col(THAI_COLUMN_MAP["cross_border_affiliate"])
     cross_border_method = get_col(THAI_COLUMN_MAP["cross_border_method"])
     cross_border_std = get_col(THAI_COLUMN_MAP["cross_border_standard"])
     cross_border_exc = get_col(THAI_COLUMN_MAP["cross_border_exception"])
-    storage_type = get_col(THAI_COLUMN_MAP["storage_type"])
-    storage_method = get_col(THAI_COLUMN_MAP["storage_method"])
-    
-    # Extended fields (Section 6, 7, 8)
-    access_rights = get_col(THAI_COLUMN_MAP["access_rights"])
-    deletion_method = get_col(THAI_COLUMN_MAP["deletion_method"])
-    data_owner = get_col(THAI_COLUMN_MAP["data_owner"])
-    third_party_recipients = get_col(THAI_COLUMN_MAP["third_party_recipients"])
-    disclosure_exemption = get_col(THAI_COLUMN_MAP["disclosure_exemption"])
-    rights_refusal = get_col(THAI_COLUMN_MAP["rights_refusal"])
-    retention_period = get_col(THAI_COLUMN_MAP["retention_period"])
-    retention_expiry_date_raw = row[THAI_COLUMN_MAP["retention_expiry_date"] - 1] if THAI_COLUMN_MAP["retention_expiry_date"] <= len(row) else None
-    next_review_date_raw = row[THAI_COLUMN_MAP["next_review_date"] - 1] if THAI_COLUMN_MAP["next_review_date"] <= len(row) else None
-    security_org = get_col(THAI_COLUMN_MAP["security_organizational"])
-    security_tech = get_col(THAI_COLUMN_MAP["security_technical"])
-    security_phys = get_col(THAI_COLUMN_MAP["security_physical"])
-    security_access = get_col(THAI_COLUMN_MAP["security_access_control"])
-    security_resp = get_col(THAI_COLUMN_MAP["security_responsibility"])
-    security_audit = get_col(THAI_COLUMN_MAP["security_audit"])
+    storage_type = get_col(THAI_COLUMN_MAP.get("storage_type"))
+    storage_method = get_col(THAI_COLUMN_MAP.get("storage_method"))
+    access_rights = get_col(THAI_COLUMN_MAP.get("access_rights"))
+    deletion_method = get_col(THAI_COLUMN_MAP.get("deletion_method"))
+    data_owner = get_col(THAI_COLUMN_MAP.get("data_owner"))
+    retention_period = get_col(THAI_COLUMN_MAP.get("retention_period"))
 
     # Validate required fields
     if not activity_name:
@@ -247,16 +228,20 @@ def _validate_row(
     # Detect controller/processor
     controller_id = None
     processor_id = None
+    controller_name_stored = None
+    processor_name_stored = None
     
     if role_type == "Controller" and controller_name:
-        ctrl = lookups["ctrl_by_name"].get(controller_name.lower())
+        ctrl = lookups["ctrl_by_name"].get(_normalize_name(controller_name))
         if ctrl:
             controller_id = ctrl.id
+        controller_name_stored = controller_name
         # In flexible mode, don't error if controller not found - log as warning
     elif role_type == "Processor" and controller_name:
-        proc = lookups["proc_by_name"].get(controller_name.lower())
+        proc = lookups["proc_by_name"].get(_normalize_name(controller_name))
         if proc:
             processor_id = proc.id
+        processor_name_stored = controller_name
 
     # Parse data subject categories (comma-separated or using Thai text)
     ds_ids: list[int] = []
@@ -280,15 +265,6 @@ def _validate_row(
                 if pdt:
                     pdt_ids.append(pdt.id)
 
-    # Parse date fields
-    retention_expiry_date = None
-    if retention_expiry_date_raw is not None:
-        retention_expiry_date = _parse_date(retention_expiry_date_raw.value if hasattr(retention_expiry_date_raw, 'value') else retention_expiry_date_raw)
-
-    next_review_date = None
-    if next_review_date_raw is not None:
-        next_review_date = _parse_date(next_review_date_raw.value if hasattr(next_review_date_raw, 'value') else next_review_date_raw)
-
     if errors:
         return None, errors
 
@@ -299,6 +275,8 @@ def _validate_row(
         department_id=department_id,
         controller_id=controller_id,
         processor_id=processor_id,
+        controller_name=controller_name_stored,
+        processor_name=processor_name_stored,
         data_subject_category_ids=ds_ids,
         personal_data_type_ids=pdt_ids,
         activity_name=activity_name,
@@ -308,30 +286,17 @@ def _validate_row(
         data_source_direct=data_src_direct,
         data_source_other=data_src_other,
         legal_basis_thai=legal_basis,
-        minor_consent_under_10=minor_under_10,
-        minor_consent_10_20=minor_10_20,
         cross_border_transfer=cross_border_transfer,
         cross_border_affiliate=cross_border_affiliate,
         cross_border_method=cross_border_method,
         cross_border_standard=cross_border_std,
         cross_border_exception=cross_border_exc,
         retention_period=retention_period,
-        retention_expiry_date=retention_expiry_date,
-        next_review_date=next_review_date,
         storage_type=storage_type,
         storage_method=storage_method,
         access_rights=access_rights,
         deletion_method=deletion_method,
         data_owner=data_owner,
-        third_party_recipients=third_party_recipients,
-        disclosure_exemption=disclosure_exemption,
-        rights_refusal=rights_refusal,
-        security_organizational=security_org,
-        security_technical=security_tech,
-        security_physical=security_phys,
-        security_access_control=security_access,
-        security_responsibility=security_resp,
-        security_audit=security_audit,
     )
     return row_data, []
 
@@ -396,6 +361,8 @@ def _parse_sheet(
 
 def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
     """Parse a Thai ROPA form Excel file and return a preview with valid rows and errors."""
+    from app.schemas.import_export import ControllerProcessorOption
+    
     wb = load_workbook(filename=BytesIO(file_content), read_only=False, data_only=True)
     lookups = _build_lookup_maps(db)
 
@@ -420,12 +387,35 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
 
     wb.close()
 
+    # Build controller and processor options
+    controller_options = [
+        ControllerProcessorOption(
+            id=c.id, 
+            name=c.name, 
+            type="controller",
+            is_active=c.is_active
+        )
+        for c in lookups["ctrl_by_name"].values()
+    ]
+    
+    processor_options = [
+        ControllerProcessorOption(
+            id=p.id, 
+            name=p.name, 
+            type="processor",
+            is_active=p.is_active
+        )
+        for p in lookups["proc_by_name"].values()
+    ]
+
     return ImportPreviewResponse(
         valid_rows=all_valid,
         errors=all_errors,
         total_rows=total_rows,
         valid_count=len(all_valid),
         error_count=len(all_errors),
+        controller_options=controller_options,
+        processor_options=processor_options,
     )
 
 
@@ -509,9 +499,9 @@ def confirm_import(
             data_source_other=row.data_source_other,
             # Section 3: Legal Basis
             legal_basis_thai=row.legal_basis_thai,
-            # Section 4: Minor Consent (not applicable for Processor)
-            minor_consent_under_10=row.minor_consent_under_10 if row.role_type == "Controller" else None,
-            minor_consent_10_20=row.minor_consent_10_20 if row.role_type == "Controller" else None,
+            # Section 4: Minor Consent (not applicable for Processor) - Excel doesn't have these fields
+            minor_consent_under_10=None,
+            minor_consent_10_20=None,
             # Section 5: Cross-Border Transfer
             cross_border_transfer=row.cross_border_transfer,
             cross_border_affiliate=row.cross_border_affiliate,
@@ -520,24 +510,24 @@ def confirm_import(
             cross_border_exception=row.cross_border_exception,
             # Section 6: Retention Policy
             retention_period=row.retention_period,
-            retention_expiry_date=row.retention_expiry_date,
-            next_review_date=row.next_review_date,
+            retention_expiry_date=None,  # Excel doesn't have this field
+            next_review_date=None,  # Excel doesn't have this field
             storage_type=row.storage_type,
             storage_method=row.storage_method,
             access_rights=row.access_rights,
             deletion_method=row.deletion_method,
             # Section 7: Data Usage/Disclosure
             data_owner=row.data_owner,
-            third_party_recipients=row.third_party_recipients,
-            disclosure_exemption=row.disclosure_exemption,
-            rights_refusal=row.rights_refusal,
-            # Section 8: Security Measures
-            security_organizational=row.security_organizational,
-            security_technical=row.security_technical,
-            security_physical=row.security_physical,
-            security_access_control=row.security_access_control,
-            security_responsibility=row.security_responsibility,
-            security_audit=row.security_audit,
+            third_party_recipients=None,  # Excel doesn't have this field
+            disclosure_exemption=None,  # Excel doesn't have this field
+            rights_refusal=None,  # Excel doesn't have this field
+            # Section 8: Security Measures - Excel doesn't have these fields
+            security_organizational=None,
+            security_technical=None,
+            security_physical=None,
+            security_access_control=None,
+            security_responsibility=None,
+            security_audit=None,
         )
         db.add(record)
         db.flush()

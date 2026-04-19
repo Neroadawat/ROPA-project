@@ -25,38 +25,38 @@ class RopaRecord(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Activity & Purpose
-    activity_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    activity_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     purpose: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     risk_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Data Acquisition
-    data_acquisition_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    data_source_direct: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    data_source_other: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    data_acquisition_method: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    data_source_direct: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    data_source_other: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Legal Basis
-    legal_basis_thai: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    minor_consent_under_10: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    minor_consent_10_20: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    legal_basis_thai: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    minor_consent_under_10: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    minor_consent_10_20: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Cross-border Transfer
     cross_border_transfer: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    cross_border_affiliate: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    cross_border_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    cross_border_standard: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    cross_border_exception: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    cross_border_affiliate: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cross_border_method: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cross_border_standard: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    cross_border_exception: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Retention & Storage
-    retention_period: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retention_period: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     retention_expiry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)  
     next_review_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)       
-    storage_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    storage_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    access_rights: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    deletion_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    storage_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    storage_method: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    access_rights: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    deletion_method: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Data Owner & Third Party
-    data_owner: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    data_owner: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     third_party_recipients: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     disclosure_exemption: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     rights_refusal: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
