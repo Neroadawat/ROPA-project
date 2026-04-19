@@ -7,7 +7,8 @@ import { Header } from "@/components/layout/header";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, History, ChevronDown, ChevronRight, AlertCircle, Info } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Loader2, AlertTriangle, History, ChevronDown, ChevronRight, AlertCircle, Info, Eye } from "lucide-react";
+import { ImportPreviewDetailModal } from "@/components/import/import-preview-detail-modal";
 import {
   importApi, usersApi, departmentsApi, ApiError,
   type ImportPreviewData, type ImportRowError, type ImportBatchData, type UserData, type ImportRowData,
@@ -37,6 +38,9 @@ export default function ImportPage() {
   // Store selected controller/processor IDs for each row
   const [rowControllerMapping, setRowControllerMapping] = useState<Record<string, number | null>>({});
   const [rowProcessorMapping, setRowProcessorMapping] = useState<Record<string, number | null>>({});
+  // Detail modal state
+  const [selectedDetailRow, setSelectedDetailRow] = useState<ImportRowData | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBatches = useCallback(async () => {
@@ -290,7 +294,7 @@ export default function ImportPage() {
                   ตัวอย่างแถวที่จะนำเข้า ({preview.valid_count} แถว)
                 </h3>
                 <div className="space-y-4">
-                  {preview.valid_rows.slice(0, 10).map((row, idx) => {
+                  {preview.valid_rows.map((row, idx) => {
                     const rowKey = `${row.sheet_name}-${row.row_number}`;
                     const controllerValue = rowControllerMapping[rowKey] !== undefined ? rowControllerMapping[rowKey] : row.controller_id;
                     const processorValue = rowProcessorMapping[rowKey] !== undefined ? rowProcessorMapping[rowKey] : row.processor_id;
@@ -314,6 +318,20 @@ export default function ImportPage() {
                             <span className="text-xs text-muted-foreground">วัตถุประสงค์</span>
                             <p className="font-medium text-sm">{row.purpose ? row.purpose.substring(0, 100) : "-"}</p>
                           </div>
+                        </div>
+
+                        {/* View Details Button */}
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedDetailRow(row);
+                              setIsDetailModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            ดูรายละเอียด
+                          </button>
                         </div>
                         
                         {/* Controller/Processor Selector */}
@@ -363,9 +381,6 @@ export default function ImportPage() {
                       </div>
                     );
                   })}
-                  {preview.valid_count > 10 && (
-                    <p className="text-xs text-muted-foreground text-center bg-white rounded p-2">... และอีก {preview.valid_count - 10} แถว</p>
-                  )}
                 </div>
               </div>
             )}
@@ -441,94 +456,6 @@ export default function ImportPage() {
               </div>
             )}
 
-            {/* Valid Rows Preview */}
-            {preview.valid_count > 0 && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  ตัวอย่างแถวที่จะนำเข้า ({preview.valid_count} แถว)
-                </h3>
-                <div className="space-y-4">
-                  {preview.valid_rows.slice(0, 10).map((row, idx) => {
-                    const rowKey = `${row.sheet_name}-${row.row_number}`;
-                    const controllerValue = rowControllerMapping[rowKey] !== undefined ? rowControllerMapping[rowKey] : row.controller_id;
-                    const processorValue = rowProcessorMapping[rowKey] !== undefined ? rowProcessorMapping[rowKey] : row.processor_id;
-                    
-                    return (
-                      <div key={idx} className="bg-white rounded p-4 border border-emerald-200 space-y-3">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-xs text-muted-foreground">ชีต</span>
-                            <p className="font-medium">{row.sheet_name}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-muted-foreground">บทบาท</span>
-                            <p className="font-medium">{row.role_type}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-xs text-muted-foreground">กิจกรรม</span>
-                            <p className="font-medium">{row.activity_name || "-"}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-xs text-muted-foreground">วัตถุประสงค์</span>
-                            <p className="font-medium text-sm">{row.purpose ? row.purpose.substring(0, 100) : "-"}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Controller/Processor Selector */}
-                        {row.role_type === "Controller" && (
-                          <div className="border-t border-emerald-100 pt-3">
-                            <label className="text-xs text-muted-foreground block mb-1">
-                              เจ้าของข้อมูล: {row.controller_name || "(ไม่ระบุ)"}
-                            </label>
-                            <select
-                              value={controllerValue || ""}
-                              onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : null;
-                                setRowControllerMapping(prev => ({ ...prev, [rowKey]: val }));
-                              }}
-                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">-- เลือก/ตรวจสอบเจ้าของข้อมูล --</option>
-                              {preview.controller_options.filter(c => c.is_active).map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))}
-                              <option value="NEW">+ สร้างเจ้าของข้อมูลใหม่</option>
-                            </select>
-                          </div>
-                        )}
-                        
-                        {row.role_type === "Processor" && (
-                          <div className="border-t border-emerald-100 pt-3">
-                            <label className="text-xs text-muted-foreground block mb-1">
-                              ผู้ประมวลผล: {row.processor_name || "(ไม่ระบุ)"}
-                            </label>
-                            <select
-                              value={processorValue || ""}
-                              onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : null;
-                                setRowProcessorMapping(prev => ({ ...prev, [rowKey]: val }));
-                              }}
-                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">-- เลือก/ตรวจสอบผู้ประมวลผล --</option>
-                              {preview.processor_options.filter(p => p.is_active).map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                              <option value="NEW">+ สร้างผู้ประมวลผลใหม่</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {preview.valid_count > 10 && (
-                    <p className="text-xs text-muted-foreground text-center bg-white rounded p-2">... และอีก {preview.valid_count - 10} แถว</p>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
               <Button variant="outline" onClick={handleCancel} className="rounded-lg">ยกเลิก</Button>
@@ -543,6 +470,13 @@ export default function ImportPage() {
           <DataTable columns={batchColumns} data={batches} searchPlaceholder="ค้นหาชื่อไฟล์..." searchKeys={["filename"]} pageSize={10} emptyMessage="ยังไม่มีประวัติการนำเข้า" />
         )}
       </div>
+
+      {/* Detail Modal */}
+      <ImportPreviewDetailModal
+        isOpen={isDetailModalOpen}
+        row={selectedDetailRow}
+        onClose={() => setIsDetailModalOpen(false)}
+      />
     </DashboardLayout>
   );
 }

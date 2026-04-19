@@ -205,12 +205,22 @@ def _validate_row(
     deletion_method = get_col(THAI_COLUMN_MAP.get("deletion_method"))
     data_owner = get_col(THAI_COLUMN_MAP.get("data_owner"))
     retention_period = get_col(THAI_COLUMN_MAP.get("retention_period"))
-
+    excel_address = get_col(THAI_COLUMN_MAP["address"])
+    
     # Validate required fields
-    if not activity_name:
+    # For Processor: activity_name is often empty, so only validate if we have data
+    # For Controller: activity_name should ideally be present
+    if not activity_name and role_type == "Controller":
         errors.append(ImportRowError(
             sheet_name=sheet_name, row_number=row_number,
-            field_name="activity_name", error_reason="กิจกรรมประมวลผล (column 3) is required",
+            field_name="activity_name", error_reason="กิจกรรมประมวลผล (column 3) is recommended for Controllers",
+        ))
+    
+    # Make sure we have either controller name or activity name (at least one)
+    if not controller_name and not activity_name:
+        errors.append(ImportRowError(
+            sheet_name=sheet_name, row_number=row_number,
+            field_name="row_data", error_reason="Row must have either entity name (column 2) or activity (column 3)",
         ))
 
     # Department lookup: Try to infer from controller name or set to None
@@ -230,17 +240,29 @@ def _validate_row(
     processor_id = None
     controller_name_stored = None
     processor_name_stored = None
+    controller_address = None
+    controller_email = None
+    controller_phone = None
+    processor_address = None
+    processor_email = None
+    processor_phone = None
     
     if role_type == "Controller" and controller_name:
         ctrl = lookups["ctrl_by_name"].get(_normalize_name(controller_name))
         if ctrl:
             controller_id = ctrl.id
+            controller_address = ctrl.address
+            controller_email = ctrl.email
+            controller_phone = ctrl.phone
         controller_name_stored = controller_name
         # In flexible mode, don't error if controller not found - log as warning
     elif role_type == "Processor" and controller_name:
         proc = lookups["proc_by_name"].get(_normalize_name(controller_name))
         if proc:
             processor_id = proc.id
+            processor_address = proc.address
+            processor_email = proc.email
+            processor_phone = proc.phone
         processor_name_stored = controller_name
 
     # Parse data subject categories (comma-separated or using Thai text)
@@ -277,11 +299,24 @@ def _validate_row(
         processor_id=processor_id,
         controller_name=controller_name_stored,
         processor_name=processor_name_stored,
+
+        excel_address=excel_address,
+        excel_personal_data_types=personal_data_desc,
+        excel_data_subject_categories=data_subject_desc,
+        excel_data_type_general=data_type_general,
+
+        controller_address=controller_address,
+        controller_email=controller_email,
+        controller_phone=controller_phone,
+        processor_address=processor_address,
+        processor_email=processor_email,
+        processor_phone=processor_phone,
+
         data_subject_category_ids=ds_ids,
         personal_data_type_ids=pdt_ids,
         activity_name=activity_name,
         purpose=purpose,
-        risk_level=None,  # Not directly from form - can be inferred/set later
+        risk_level=None,
         data_acquisition_method=data_acq_method,
         data_source_direct=data_src_direct,
         data_source_other=data_src_other,
@@ -305,22 +340,27 @@ def _parse_sheet(
     ws: Worksheet,
     sheet_name: str,
     lookups: dict,
-) -> tuple[list[ImportRowData], list[ImportRowError]]:
+) -> tuple[list[ImportRowData], list[ImportRowError], int]:
     """Parse a Thai ROPA form worksheet.
     
     Thai form structure:
     - Rows 1-4+ are headers (varying by sheet)
     - Data rows start after headers
     - Find first data row by looking for sequence number in column 1
+    
+    Returns:
+        Tuple of (valid_rows, errors, row_count)
+        where row_count is the number of rows with actual data (excluding empty rows)
     """
     rows = list(ws.iter_rows(values_only=False))
     if not rows:
-        return [], []
+        return [], [], 0
 
     role_type = _detect_sheet_type(ws)
 
     valid_rows: list[ImportRowData] = []
     all_errors: list[ImportRowError] = []
+    rows_with_data = 0
 
     # Find the first data row (skip headers by looking for numeric sequence number in column 1)
     first_data_row = None
@@ -344,19 +384,22 @@ def _parse_sheet(
 
     # Parse data rows
     for row_idx, row in enumerate(rows[first_data_row:], start=first_data_row + 1):
-        # Check if row has any data in key columns
-        seq_val = _get_cell_value(row, THAI_COLUMN_MAP["seq"])
+        # Check if row has required data:
+        # - For any row: need either activity_name OR a controller/processor name
         activity_val = _get_cell_value(row, THAI_COLUMN_MAP["activity_name"])
+        controller_val = _get_cell_value(row, THAI_COLUMN_MAP["controller_name"])
         
-        if not seq_val and not activity_val:
-            continue  # Skip empty rows
+        # Skip row if both activity and controller/processor name are empty
+        if not activity_val and not controller_val:
+            continue  # Skip entirely empty rows
 
+        rows_with_data += 1
         parsed, errors = _validate_row(row, row_idx, sheet_name, role_type, lookups)
         if parsed:
             valid_rows.append(parsed)
         all_errors.extend(errors)
 
-    return valid_rows, all_errors
+    return valid_rows, all_errors, rows_with_data
 
 
 def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
@@ -372,18 +415,10 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
 
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
-        valid, errors = _parse_sheet(ws, sheet_name, lookups)
+        valid, errors, sheet_row_count = _parse_sheet(ws, sheet_name, lookups)
         all_valid.extend(valid)
         all_errors.extend(errors)
-        
-        # Count data rows by looking for rows with sequence numbers
-        for row in ws.iter_rows(values_only=True):
-            if row and row[0] is not None:
-                try:
-                    int(row[0])
-                    total_rows += 1
-                except (ValueError, TypeError):
-                    continue
+        total_rows += sheet_row_count
 
     wb.close()
 
@@ -393,7 +428,10 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
             id=c.id, 
             name=c.name, 
             type="controller",
-            is_active=c.is_active
+            is_active=c.is_active,
+            address=c.address,
+            email=c.email,
+            phone=c.phone
         )
         for c in lookups["ctrl_by_name"].values()
     ]
@@ -403,7 +441,10 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
             id=p.id, 
             name=p.name, 
             type="processor",
-            is_active=p.is_active
+            is_active=p.is_active,
+            address=p.address,
+            email=p.email,
+            phone=p.phone
         )
         for p in lookups["proc_by_name"].values()
     ]
@@ -425,6 +466,7 @@ def confirm_import(
     filename: str,
     user_id: int,
     target_department_id: Optional[int] = None,
+    row_mappings: Optional[dict[str, int]] = None,
 ) -> ImportBatch:
     """
     Re-parse the file and import only valid rows, creating ROPA records.
@@ -435,6 +477,9 @@ def confirm_import(
         filename: Original filename
         user_id: User performing import
         target_department_id: Explicit department ID to use (overrides inference)
+        row_mappings: Dict mapping row_keys (sheet-row) to controller/processor IDs.
+                      If provided, uses these IDs instead of Excel name matching.
+                      Example: {"Controller-15": 5, "Processor-20": 10}
     
     Raises:
         ValueError: If department_id cannot be determined for import
@@ -447,7 +492,7 @@ def confirm_import(
 
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
-        valid, errors = _parse_sheet(ws, sheet_name, lookups)
+        valid, errors, _ = _parse_sheet(ws, sheet_name, lookups)
         all_valid.extend(valid)
         all_errors.extend(errors)
 

@@ -744,19 +744,74 @@ export interface ControllerProcessorOption {
   name: string;
   type: "controller" | "processor";
   is_active: boolean;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 export interface ImportRowData {
   sheet_name: string;
   row_number: number;
   role_type: string;
+  department_id?: number | null;
   controller_id?: number | null;
   processor_id?: number | null;
+
   controller_name?: string | null;
   processor_name?: string | null;
-  activity_name?: string;
-  purpose?: string;
-  [key: string]: unknown;
+
+  excel_address?: string | null;
+  excel_personal_data_types?: string | null;
+  excel_data_subject_categories?: string | null;
+  excel_data_type_general?: string | null;
+
+  controller_address?: string | null;
+  controller_email?: string | null;
+  controller_phone?: string | null;
+  processor_address?: string | null;
+  processor_email?: string | null;
+  processor_phone?: string | null;
+
+  data_subject_category_ids: number[];
+  personal_data_type_ids: number[];
+
+  activity_name?: string | null;
+  purpose?: string | null;
+  risk_level?: string | null;
+
+  data_acquisition_method?: string | null;
+  data_source_direct?: string | null;
+  data_source_other?: string | null;
+
+  legal_basis_thai?: string | null;
+  legal_basis_gdpr?: string | null;
+
+  minor_consent_under_10?: string | null;
+  minor_consent_10_20?: string | null;
+
+  cross_border_transfer?: boolean | null;
+  cross_border_affiliate?: string | null;
+  cross_border_method?: string | null;
+  cross_border_standard?: string | null;
+  cross_border_exception?: string | null;
+
+  retention_period?: string | null;
+  storage_type?: string | null;
+  storage_method?: string | null;
+  access_rights?: string | null;
+  deletion_method?: string | null;
+
+  data_owner?: string | null;
+  third_party_recipients?: string | null;
+  disclosure_exemption?: string | null;
+  rights_refusal?: string | null;
+
+  security_organizational?: string | null;
+  security_technical?: string | null;
+  security_physical?: string | null;
+  security_access_control?: string | null;
+  security_responsibility?: string | null;
+  security_audit?: string | null;
 }
 
 export interface ImportPreviewData {
