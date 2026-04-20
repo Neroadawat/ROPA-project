@@ -432,6 +432,53 @@ def _parse_sheet(
     return valid_rows, all_errors, rows_with_data
 
 
+def _check_duplicate_record(db: Session, row_data: ImportRowData) -> tuple[bool, Optional[int]]:
+    """
+    Check if the imported row data matches an existing ROPA record.
+    Only checks after we have confirmed controller/processor IDs.
+    
+    Returns:
+        (is_duplicate: bool, duplicate_record_id: Optional[int])
+    
+    Matches on:
+    - Same role_type
+    - Same controller_id/processor_id (must be matched)
+    - Same or very similar activity_name
+    """
+    # Only check if we have confirmed controller/processor ID
+    if not row_data.controller_id and not row_data.processor_id:
+        return False, None
+    
+    # Need activity name for reliable duplicate detection
+    if not row_data.activity_name:
+        return False, None
+    
+    query = db.query(RopaRecord).filter(
+        RopaRecord.is_deleted == False,
+        RopaRecord.role_type == row_data.role_type,
+    )
+    
+    # Filter by controller/processor
+    if row_data.role_type == "Controller" and row_data.controller_id:
+        query = query.filter(RopaRecord.controller_id == row_data.controller_id)
+    elif row_data.role_type == "Processor" and row_data.processor_id:
+        query = query.filter(RopaRecord.processor_id == row_data.processor_id)
+    else:
+        return False, None
+    
+    # Try exact activity name match first
+    activity_name_normalized = _normalize_name(row_data.activity_name)
+    
+    # Try to find by normalized activity name
+    for record in query.all():
+        existing_normalized = _normalize_name(record.activity_name) if record.activity_name else ""
+        if activity_name_normalized and existing_normalized == activity_name_normalized:
+            return True, record.id
+    
+    # If no exact match, don't mark as duplicate (to be safe)
+    return False, None
+
+
 def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
     """Parse a Thai ROPA form Excel file and return a preview with valid rows and errors."""
     from app.schemas.import_export import ControllerProcessorOption
@@ -451,6 +498,15 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
         total_rows += sheet_row_count
 
     wb.close()
+
+    # Check for duplicates in valid rows (only if controller/processor ID is already matched)
+    for row in all_valid:
+        # Only check if we have confirmed IDs (will not be auto-created)
+        if row.controller_id or row.processor_id:
+            is_duplicate, dup_id = _check_duplicate_record(db, row)
+            if is_duplicate:
+                row.is_duplicate = True
+                row.duplicate_record_id = dup_id
 
     # Build controller and processor options
     controller_options = [
@@ -488,6 +544,79 @@ def preview_import(db: Session, file_content: bytes) -> ImportPreviewResponse:
         controller_options=controller_options,
         processor_options=processor_options,
     )
+
+
+def _get_or_create_controller(db: Session, name: str, address: Optional[str], email: Optional[str], phone: Optional[str], user_id: int) -> int:
+    """Get controller by name or create a new one if it doesn't exist."""
+    normalized_name = _normalize_name(name)
+    
+    # Try to find existing controller by normalized name
+    existing = db.query(Controller).filter(
+        Controller.name.ilike(f"%{name}%")
+    ).first()
+    
+    if existing:
+        return existing.id
+    
+    # Create new controller with data from import
+    new_controller = Controller(
+        name=name,
+        address=address,
+        email=email,
+        phone=phone,
+        is_active=True
+    )
+    db.add(new_controller)
+    db.flush()
+    
+    log_action(
+        db,
+        user_id=user_id,
+        action="create",
+        table_name="controllers",
+        record_id=new_controller.id,
+        new_value={"name": name, "address": address, "email": email, "phone": phone},
+        reason="Auto-created during Excel import"
+    )
+    
+    return new_controller.id
+
+
+def _get_or_create_processor(db: Session, name: str, address: Optional[str], email: Optional[str], phone: Optional[str], user_id: int, source_controller_id: Optional[int] = None) -> int:
+    """Get processor by name or create a new one if it doesn't exist."""
+    normalized_name = _normalize_name(name)
+    
+    # Try to find existing processor by normalized name
+    existing = db.query(Processor).filter(
+        Processor.name.ilike(f"%{name}%")
+    ).first()
+    
+    if existing:
+        return existing.id
+    
+    # Create new processor with data from import
+    new_processor = Processor(
+        name=name,
+        address=address,
+        email=email,
+        phone=phone,
+        source_controller_id=source_controller_id,
+        is_active=True
+    )
+    db.add(new_processor)
+    db.flush()
+    
+    log_action(
+        db,
+        user_id=user_id,
+        action="create",
+        table_name="processors",
+        record_id=new_processor.id,
+        new_value={"name": name, "address": address, "email": email, "phone": phone, "source_controller_id": source_controller_id},
+        reason="Auto-created during Excel import"
+    )
+    
+    return new_processor.id
 
 
 def confirm_import(
@@ -529,7 +658,6 @@ def confirm_import(
     wb.close()
 
     rows_success = 0
-    rows_failed = len(all_errors)
 
     # Determine default department for rows without one
     default_dept_id = None
@@ -555,6 +683,56 @@ def confirm_import(
     for row in all_valid:
         # Use row's department if available, otherwise use default
         dept_id = row.department_id or default_dept_id
+        
+        # Handle controller/processor ID assignment with auto-creation if needed
+        controller_id = row.controller_id
+        processor_id = row.processor_id
+        
+        # For Controller: if no match was found but we have a name, create new controller
+        if row.role_type == "Controller" and controller_id is None and row.controller_name:
+            controller_id = _get_or_create_controller(
+                db, 
+                row.controller_name, 
+                row.controller_address or row.excel_address,
+                row.controller_email,
+                row.controller_phone,
+                user_id
+            )
+        
+        # For Processor: if no match was found but we have a name, create new processor
+        if row.role_type == "Processor" and processor_id is None and row.processor_name:
+            processor_id = _get_or_create_processor(
+                db,
+                row.processor_name,
+                row.processor_address or row.excel_address,
+                row.processor_email,
+                row.processor_phone,
+                user_id,
+                source_controller_id=None  # No specific source controller for imported processors
+            )
+
+        # Check for duplicate after controller/processor is assigned
+        row_for_dup_check = ImportRowData(
+            sheet_name=row.sheet_name,
+            row_number=row.row_number,
+            role_type=row.role_type,
+            controller_id=controller_id,
+            processor_id=processor_id,
+            activity_name=row.activity_name,
+            purpose=row.purpose,
+            controller_name=row.controller_name,
+            processor_name=row.processor_name,
+        )
+        is_duplicate, dup_id = _check_duplicate_record(db, row_for_dup_check)
+        if is_duplicate:
+            # Skip this row - it's a duplicate
+            all_errors.append(ImportRowError(
+                sheet_name=row.sheet_name,
+                row_number=row.row_number,
+                field_name="row_data",
+                error_reason=f"แถวนี้ซ้ำกับ ROPA Record #{dup_id} ที่มีอยู่แล้ว"
+            ))
+            continue
 
         record = RopaRecord(
             department_id=dept_id,
@@ -562,8 +740,8 @@ def confirm_import(
             role_type=row.role_type,
             status="pending_approval",  # Always start as pending approval per requirements
             is_deleted=False,  # Newly imported records are not deleted
-            controller_id=row.controller_id,
-            processor_id=row.processor_id,
+            controller_id=controller_id,
+            processor_id=processor_id,
             # Section 1: Basic Information
             activity_name=row.activity_name,
             purpose=row.purpose,
@@ -636,6 +814,9 @@ def confirm_import(
     except Exception as e:
         db.rollback()
         raise e
+
+    # Final error count includes both parsing errors and duplicate detection errors
+    rows_failed = len(all_errors)
 
     # Create ImportBatch record
     error_details = None

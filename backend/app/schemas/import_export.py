@@ -35,6 +35,10 @@ class ImportRowData(BaseModel):
     controller_name: Optional[str] = None
     processor_name: Optional[str] = None
 
+    # Duplicate detection
+    is_duplicate: bool = False
+    duplicate_record_id: Optional[int] = None
+
     # raw values from Excel
     excel_address: Optional[str] = None
     excel_personal_data_types: Optional[str] = None

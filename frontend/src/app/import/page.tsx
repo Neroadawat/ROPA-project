@@ -320,6 +320,17 @@ export default function ImportPage() {
                           </div>
                         </div>
 
+                        {/* Duplicate Warning */}
+                        {row.is_duplicate && (
+                          <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 flex items-start gap-3">
+                            <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                            <div className="flex-1 text-xs text-yellow-700">
+                              <p className="font-semibold mb-1">⚠️ ข้อมูลนี้ซ้ำกับ ROPA Record #{row.duplicate_record_id}</p>
+                              <p>แถวนี้จะไม่ถูกนำเข้าเพราะเป็นข้อมูลซ้ำที่มีอยู่แล้ว</p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* View Details Button */}
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -336,46 +347,66 @@ export default function ImportPage() {
                         
                         {/* Controller/Processor Selector */}
                         {row.role_type === "Controller" && (
-                          <div className="border-t border-emerald-100 pt-3">
-                            <label className="text-xs text-muted-foreground block mb-1">
+                          <div className="border-t border-emerald-100 pt-3 space-y-2">
+                            <label className="text-xs text-muted-foreground block">
                               เจ้าของข้อมูล: {row.controller_name || "(ไม่ระบุ)"}
                             </label>
-                            <select
-                              value={controllerValue || ""}
-                              onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : null;
-                                setRowControllerMapping(prev => ({ ...prev, [rowKey]: val }));
-                              }}
-                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">-- เลือก/ตรวจสอบเจ้าของข้อมูล --</option>
-                              {preview.controller_options.filter(c => c.is_active).map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))}
-                              <option value="NEW">+ สร้างเจ้าของข้อมูลใหม่</option>
-                            </select>
+                            {row.controller_id ? (
+                              <div className="px-2 py-1.5 border border-green-400 rounded text-xs bg-green-50 text-green-700 font-medium">
+                                ✓ เลือกแล้ว: {preview.controller_options.find(c => c.id === row.controller_id)?.name || `ID: ${row.controller_id}`}
+                              </div>
+                            ) : (
+                              <>
+                                <select
+                                  value={controllerValue || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value ? Number(e.target.value) : null;
+                                    setRowControllerMapping(prev => ({ ...prev, [rowKey]: val }));
+                                  }}
+                                  className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="">-- เลือกเจ้าของข้อมูล --</option>
+                                  {preview.controller_options.filter(c => c.is_active).map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                  💡 ถ้าไม่เลือก จะสร้างเจ้าของข้อมูลใหม่จากข้อมูลที่ import มา
+                                </p>
+                              </>
+                            )}
                           </div>
                         )}
                         
                         {row.role_type === "Processor" && (
-                          <div className="border-t border-emerald-100 pt-3">
-                            <label className="text-xs text-muted-foreground block mb-1">
+                          <div className="border-t border-emerald-100 pt-3 space-y-2">
+                            <label className="text-xs text-muted-foreground block">
                               ผู้ประมวลผล: {row.processor_name || "(ไม่ระบุ)"}
                             </label>
-                            <select
-                              value={processorValue || ""}
-                              onChange={(e) => {
-                                const val = e.target.value ? Number(e.target.value) : null;
-                                setRowProcessorMapping(prev => ({ ...prev, [rowKey]: val }));
-                              }}
-                              className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">-- เลือก/ตรวจสอบผู้ประมวลผล --</option>
-                              {preview.processor_options.filter(p => p.is_active).map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                              <option value="NEW">+ สร้างผู้ประมวลผลใหม่</option>
-                            </select>
+                            {row.processor_id ? (
+                              <div className="px-2 py-1.5 border border-green-400 rounded text-xs bg-green-50 text-green-700 font-medium">
+                                ✓ เลือกแล้ว: {preview.processor_options.find(p => p.id === row.processor_id)?.name || `ID: ${row.processor_id}`}
+                              </div>
+                            ) : (
+                              <>
+                                <select
+                                  value={processorValue || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value ? Number(e.target.value) : null;
+                                    setRowProcessorMapping(prev => ({ ...prev, [rowKey]: val }));
+                                  }}
+                                  className="w-full px-2 py-1.5 border border-blue-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="">-- เลือกผู้ประมวลผล --</option>
+                                  {preview.processor_options.filter(p => p.is_active).map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                  💡 ถ้าไม่เลือก จะสร้างผู้ประมวลผลใหม่จากข้อมูลที่ import มา
+                                </p>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
