@@ -170,10 +170,14 @@ def _validate_row(
     sheet_name: str,
     role_type: str,
     lookups: dict,
+    inherited_controller: Optional[str] = None,
+    inherited_activity: Optional[str] = None,
 ) -> tuple[Optional[ImportRowData], list[ImportRowError]]:
     """Validate a single row using fixed Thai column positions.
     
     Handles flexible column mapping - if column doesn't exist, treats as None.
+    Supports line continuations: if a row has no controller/activity but has personal data,
+    it inherits from the previous row for grouping multiple data types.
     """
     errors: list[ImportRowError] = []
 
@@ -186,6 +190,12 @@ def _validate_row(
     # Extract all values - columns that don't exist return None
     activity_name = get_col(THAI_COLUMN_MAP["activity_name"])
     controller_name = get_col(THAI_COLUMN_MAP["controller_name"])
+    
+    # Support line continuations: use inherited values if current row has none
+    if not activity_name and inherited_activity:
+        activity_name = inherited_activity
+    if not controller_name and inherited_controller:
+        controller_name = inherited_controller
     purpose = get_col(THAI_COLUMN_MAP["purpose"])
     personal_data_desc = get_col(THAI_COLUMN_MAP["personal_data_types"])
     data_subject_desc = get_col(THAI_COLUMN_MAP["data_subject_categories"])
@@ -382,21 +392,41 @@ def _parse_sheet(
     if first_data_row is None:
         first_data_row = 4
 
-    # Parse data rows
+    # Parse data rows with support for line continuations
+    prev_controller = None
+    prev_activity = None
+    
     for row_idx, row in enumerate(rows[first_data_row:], start=first_data_row + 1):
         # Check if row has required data:
-        # - For any row: need either activity_name OR a controller/processor name
+        # - If current row has NO personal_data: skip if also no controller/activity in current row
+        # - Personal data is required to create a valid row (continuations must have data)
         activity_val = _get_cell_value(row, THAI_COLUMN_MAP["activity_name"])
         controller_val = _get_cell_value(row, THAI_COLUMN_MAP["controller_name"])
+        personal_data_val = _get_cell_value(row, THAI_COLUMN_MAP["personal_data_types"])
         
-        # Skip row if both activity and controller/processor name are empty
-        if not activity_val and not controller_val:
+        # Skip empty rows: if current row has no personal_data AND no new controller/activity
+        if not personal_data_val and not controller_val and not activity_val:
+            continue  # Skip row with no data at all
+        
+        # Use inherited values for checking if row has required fields
+        effective_activity = activity_val or prev_activity
+        effective_controller = controller_val or prev_controller
+        
+        # Skip row if still no data after inheritance attempt
+        if not effective_controller and not effective_activity and not personal_data_val:
             continue  # Skip entirely empty rows
 
         rows_with_data += 1
-        parsed, errors = _validate_row(row, row_idx, sheet_name, role_type, lookups)
+        parsed, errors = _validate_row(
+            row, row_idx, sheet_name, role_type, lookups,
+            inherited_controller=prev_controller if not controller_val else None,
+            inherited_activity=prev_activity if not activity_val else None,
+        )
         if parsed:
             valid_rows.append(parsed)
+            # Update previous row values for next iteration (for line continuation support)
+            prev_controller = parsed.controller_name or prev_controller
+            prev_activity = parsed.activity_name or prev_activity
         all_errors.extend(errors)
 
     return valid_rows, all_errors, rows_with_data
