@@ -88,6 +88,8 @@ export default function RopaRecordsPage() {
           role_type: filterRoleType || undefined,
           risk_level: filterRisk || undefined,
           status: filterStatus || undefined,
+          sort_by: "created_at",
+          sort_order: "desc",
         }),
         departmentsApi.list({ per_page: 100 }),
       ]);
@@ -200,7 +202,12 @@ export default function RopaRecordsPage() {
           </div>
         }
       />
-      <div className="p-6">
+      <div className="p-6 relative">
+        {loading && records.length > 0 && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={records}
@@ -208,6 +215,9 @@ export default function RopaRecordsPage() {
           searchKeys={["activity_name"]}
           pageSize={perPage}
           emptyMessage="ไม่พบ ROPA Record"
+          total={total}
+          currentPage={page}
+          onPageChange={setPage}
           filters={
             <div className="flex items-center gap-2 flex-wrap">
               <select value={filterDept} onChange={(e) => { setFilterDept(e.target.value); setPage(1); }}

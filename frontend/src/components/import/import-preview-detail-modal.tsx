@@ -93,14 +93,6 @@ export function ImportPreviewDetailModal({
             <Field label="ข้อมูลส่วนบุคคล" value={row.excel_personal_data_types} fullWidth />
             <Field label="หมวดหมู่เจ้าของข้อมูล" value={row.excel_data_subject_categories} fullWidth />
             <Field label="ประเภทของข้อมูล" value={row.excel_data_type_general} />
-            <Field
-              label="จำนวนประเภทข้อมูลที่ match ได้"
-              value={
-                Array.isArray(row.personal_data_type_ids) && row.personal_data_type_ids.length > 0
-                  ? `${row.personal_data_type_ids.length} ประเภท`
-                  : "ไม่ระบุ"
-              }
-            />
           </Section>
 
           <Section title="📥 แหล่งที่มาของข้อมูล">
@@ -113,7 +105,11 @@ export function ImportPreviewDetailModal({
             <Field label="ฐาน (ไทย)" value={row.legal_basis_thai} fullWidth />
             <Field label="ฐาน (GDPR)" value={row.legal_basis_gdpr} fullWidth />
           </Section>
-
+          
+          <Section title="👶 การขอความยินยอมของผู้เยาว์">
+            <Field label="อายุต่ำกว่า 10 ปี" value={row.minor_consent_under_10} />
+            <Field label="อายุ 10 - 20 ปี" value={row.minor_consent_10_20} />
+          </Section>
           <Section title="🌍 การโอนข้อมูลข้ามพรมแดน">
             <Field label="มีการโอนข้อมูล" value={row.cross_border_transfer} />
             <Field label="เป็นกลุ่มบริษัท" value={row.cross_border_affiliate} />

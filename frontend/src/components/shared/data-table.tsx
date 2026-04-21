@@ -26,6 +26,12 @@ interface DataTableProps<T extends object> {
   emptyMessage?: string;
   actions?: (item: T) => React.ReactNode;
   filters?: React.ReactNode;
+  /** Total number of records (for server-side pagination) */
+  total?: number;
+  /** Current page number (for server-side pagination) */
+  currentPage?: number;
+  /** Callback when page changes (for server-side pagination) */
+  onPageChange?: (page: number) => void;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -33,11 +39,22 @@ type SortDirection = "asc" | "desc" | null;
 export function DataTable<T extends object>({
   columns, data, searchPlaceholder = "ค้นหา...", searchKeys = [],
   pageSize = 10, emptyMessage = "ไม่พบข้อมูล", actions, filters,
+  total, currentPage: externalPage, onPageChange,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
+
+  // Use external page if provided, otherwise use internal
+  const page = externalPage ?? internalPage;
+  const handlePageChange = (newPage: number) => {
+    if (onPageChange) {
+      onPageChange(newPage);
+    } else {
+      setInternalPage(newPage);
+    }
+  };
 
   const getField = (item: T, key: string): unknown =>
     (item as unknown as Record<string, unknown>)[key];
@@ -62,17 +79,20 @@ export function DataTable<T extends object>({
     return sortDir === "asc" ? aVal.localeCompare(bVal, "th") : bVal.localeCompare(aVal, "th");
   });
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  // Calculate totalPages: use 'total' prop if provided (server-side), otherwise use sorted.length (client-side)
+  const displayTotal = total ?? sorted.length;
+  const totalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
-  const paged = sorted.slice(start, start + pageSize);
+  // If using server-side pagination (total prop provided), data is already paginated from API
+  const paged = total !== undefined ? sorted : sorted.slice(start, start + pageSize);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
       if (sortDir === "asc") setSortDir("desc");
       else { setSortKey(null); setSortDir(null); }
     } else { setSortKey(key); setSortDir("asc"); }
-    setPage(1);
+    handlePageChange(1);
   };
 
   const SortIcon = ({ colKey }: { colKey: string }) => {
@@ -90,7 +110,7 @@ export function DataTable<T extends object>({
           <Input
             placeholder={searchPlaceholder}
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => { setSearch(e.target.value); handlePageChange(1); }}
             className="pl-9 h-9 rounded-lg bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:border-red-500 focus-visible:ring-red-500/20"
           />
         </div>
@@ -148,13 +168,13 @@ export function DataTable<T extends object>({
         </div>
         {sorted.length > 0 && (
           <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3">
-            <p className="text-xs text-slate-400">แสดง {start + 1}-{Math.min(start + pageSize, sorted.length)} จาก {sorted.length} รายการ</p>
+            <p className="text-xs text-slate-400">แสดง {start + 1}-{Math.min(start + pageSize, displayTotal)} จาก {displayTotal} รายการ</p>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage(1)} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronsLeft className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => handlePageChange(1)} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronsLeft className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => handlePageChange(Math.max(1, safePage - 1))} disabled={safePage <= 1} className="text-slate-400 hover:text-slate-700"><ChevronLeft className="h-3.5 w-3.5" /></Button>
               <span className="px-3 text-xs font-medium text-slate-500">{safePage} / {totalPages}</span>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronRight className="h-3.5 w-3.5" /></Button>
-              <Button variant="ghost" size="icon-xs" onClick={() => setPage(totalPages)} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronsRight className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => handlePageChange(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronRight className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => handlePageChange(totalPages)} disabled={safePage >= totalPages} className="text-slate-400 hover:text-slate-700"><ChevronsRight className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
         )}

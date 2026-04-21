@@ -95,18 +95,46 @@ export default function ImportPage() {
 
   const handleConfirm = async () => {
     if (!file || !selectedDepartment) return;
+
     setConfirming(true);
     try {
-      const result = await importApi.confirm(file, selectedDepartment);
+      const rowMappings: Record<string, number> = {};
+
+      Object.entries(rowControllerMapping).forEach(([rowKey, value]) => {
+        if (typeof value === "number") {
+          rowMappings[rowKey] = value;
+        }
+      });
+
+      Object.entries(rowProcessorMapping).forEach(([rowKey, value]) => {
+        if (typeof value === "number") {
+          rowMappings[rowKey] = value;
+        }
+      });
+
+      const result = await importApi.confirm(file, {
+        departmentId: selectedDepartment,
+        rowMappings,
+      });
+
       toast.success(`นำเข้าสำเร็จ ${result.rows_success} แถว`);
       setPreview(null);
       setFile(null);
+      setRowControllerMapping({});
+      setRowProcessorMapping({});
       setViewMode("history");
       fetchBatches();
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (err) {
-      const errorMsg = err instanceof ApiError ? err.detail : "เกิดข้อผิดพลาดในการนำเข้า";
+      const errorMsg =
+        err instanceof ApiError ? err.detail : "เกิดข้อผิดพลาดในการนำเข้า";
       toast.error(errorMsg);
-    } finally { setConfirming(false); }
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const handleCancel = () => {
@@ -295,7 +323,7 @@ export default function ImportPage() {
                 </h3>
                 <div className="space-y-4">
                   {preview.valid_rows.map((row, idx) => {
-                    const rowKey = `${row.sheet_name}-${row.row_number}`;
+                    const rowKey = `${row.role_type}-${row.row_number}`;
                     const controllerValue = rowControllerMapping[rowKey] !== undefined ? rowControllerMapping[rowKey] : row.controller_id;
                     const processorValue = rowProcessorMapping[rowKey] !== undefined ? rowProcessorMapping[rowKey] : row.processor_id;
                     
@@ -444,7 +472,7 @@ export default function ImportPage() {
                           {Object.entries(rowErrors).map(([rowNum, errors]) => {
                             const rowContext = getRowContext(sheetName, parseInt(rowNum), preview.valid_rows);
                             const activityName = rowContext?.activity_name || "(ไม่มีชื่อกิจกรรม)";
-                            const rowKey = `${sheetName}-${rowNum}`;
+                            const rowKey = `${rowContext?.role_type || sheetName}-${rowNum}`;
                             return (
                               <div key={rowKey} className="px-6 py-3 bg-white">
                                 <button

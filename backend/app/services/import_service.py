@@ -23,61 +23,171 @@ from app.schemas.import_export import ImportPreviewResponse, ImportRowData, Impo
 from app.services.audit_service import log_action
 
 
-# Thai column indices (1-based) based on ROPA_Form.xlsx structure
-# Only includes columns that exist in the actual Excel file
-# Data starts from row 15 (header in row 12-13)
-THAI_COLUMN_MAP = {
+# Sheet-specific Thai column indices (1-based)
+
+PROCESSOR_COLUMN_MAP = {
     # Section 0: Metadata & Row ID
-    "seq": 1,                          # ลำดับ
-    
+    "seq": 1,  # A
+
     # Section 1: Identity
-    "controller_name": 2,              # 1. ชื่อผู้ประมวลผล/ควบคุม
-    "address": 3,                      # 2. ที่อยู่ (for reference only)
-    
+    "processor_name": 2,   # B ชื่อผู้ประมวลผลข้อมูลส่วนบุคคล
+    "controller_address": 3,  # C ที่อยู่ผู้ควบคุมข้อมูลส่วนบุคคล
+
     # Section 2: Activity & Purpose
-    "activity_name": 4,                # 3. กิจกรรมประมวลผล
-    "purpose": 5,                      # 4. วัตถุประสงค์ของการประมวลผล
-    
+    "activity_name": 4,    # D
+    "purpose": 5,          # E
+
     # Section 3: Data Categories
-    "personal_data_types": 6,          # 5. ข้อมูลส่วนบุคคลที่จัดเก็บ
-    "data_subject_categories": 7,      # 6. หมวดหมู่ของข้อมูล
-    "data_type_general": 8,            # 7. ประเภทของข้อมูล (ทั่วไป/อ่อนไหว)
-    
+    "personal_data_types": 6,       # F
+    "data_subject_categories": 7,   # G
+    "data_type_general": 8,         # H
+
     # Section 4: Data Source
-    "data_acquisition_method": 9,      # 8. วิธีการได้มา
-    "data_source_direct": 10,          # 9. แหล่งที่ได้มา - จากเจ้าของตรง
-    "data_source_other": 10,           # 9. แหล่งที่ได้มา - จากแหล่งอื่น (same col, row 13)
-    
+    "data_acquisition_method": 9,   # I
+    "data_source_direct": 10,       # J
+    "data_source_other": 11,        # K
+
     # Section 5: Legal Basis
-    "legal_basis_thai": 12,            # 10. ฐานในการประมวลผล
-    
+    "legal_basis_thai": 12,         # L
+
     # Section 6: Cross-border Transfer
-    "cross_border_transfer": 13,       # 11. ส่งหรือโอนต่างประเทศ
-    "cross_border_affiliate": 14,      # 11. เป็นการส่งกลุ่มบริษัท
-    "cross_border_method": 15,         # 11. วิธีการโอน
-    "cross_border_standard": 16,       # 11. มาตรฐานการคุ้มครอง
-    "cross_border_exception": 17,      # 11. ข้อยกเว้นมาตรา 28
-    
-    # Additional fields (columns may not all exist)
-    "storage_type": 18,
-    "storage_method": 19,
-    "access_rights": 20,
-    "deletion_method": 21,
-    "data_owner": 22,
-    "retention_period": 23,
+    "cross_border_transfer": 13,    # M
+    "cross_border_affiliate": 14,   # N
+    "cross_border_method": 15,      # O
+    "cross_border_standard": 16,    # P
+    "cross_border_exception": 17,   # Q
+
+    # Section 7: Retention & Storage
+    "storage_type": 18,             # R
+    "storage_method": 19,           # S
+    "retention_period": 20,         # T
+    "access_rights": 21,            # U
+    "deletion_method": 22,          # V
+
+    # Section 8: Security Measures
+    "security_organizational": 23,  # W
+    "security_technical": 24,       # X
+    "security_physical": 25,        # Y
+    "security_access_control": 26,  # Z
+    "security_responsibility": 27,  # AA
+    "security_audit": 28,           # AB
 }
 
+# ใช้สำหรับ Example / Controller-like structure
+CONTROLLER_COLUMN_MAP = {
+    "seq": 1,                       # A
+    "controller_name": 2,           # B
+    "activity_name": 3,             # C
+    "purpose": 4,                   # D
+    "personal_data_types": 5,       # E
+    "data_subject_categories": 6,   # F
+    "data_type_general": 7,         # G
+    "data_acquisition_method": 8,   # H
+    "data_source_direct": 9,        # I
+    "data_source_other": 10,        # J
+    "legal_basis_thai": 11,         # K
+    "minor_consent_under_10": 12,   # L
+    "minor_consent_10_20": 13,      # M
+    "cross_border_transfer": 14,    # N
+    "cross_border_affiliate": 15,   # O
+    "cross_border_method": 16,      # P
+    "cross_border_standard": 17,    # Q
+    "cross_border_exception": 18,   # R
+    "storage_type": 19,             # S
+    "storage_method": 20,           # T
+    "retention_period": 21,         # U
+    "access_rights": 22,            # V
+    "deletion_method": 23,          # W
+    "disclosure_exemption": 24,     # X
+    "rights_refusal": 25,           # Y
+    "security_organizational": 26,  # Z
+    "security_technical": 27,       # AA
+    "security_physical": 28,        # AB
+    "security_access_control": 29,  # AC
+    "security_responsibility": 30,  # AD
+    "security_audit": 31,           # AE
+}
+
+EXAMPLE_CONTROLLER_COLUMN_MAP = {
+    "seq": 1,                       # A
+    "controller_name": 2,           # B
+    "activity_name": 3,             # C
+    "purpose": 4,                   # D
+    "personal_data_types": 5,       # E
+    "data_subject_categories": 6,   # F
+    "data_type_general": 7,         # G
+    "data_acquisition_method": 8,   # H
+    "data_source_direct": 9,        # I
+    "data_source_other": 10,        # J
+    "legal_basis_thai": 11,         # K
+    "minor_consent_under_10": 12,   # L
+    "minor_consent_10_20": 13,      # M
+    "cross_border_transfer": 14,    # N
+    "cross_border_affiliate": 15,   # O
+    "cross_border_method": 16,      # P
+    "cross_border_standard": 17,    # Q
+    "cross_border_exception": 18,   # R
+    "storage_type": 19,             # S
+    "storage_method": 20,           # T
+    "retention_period": 21,         # U
+    "access_rights": 22,            # V
+    "deletion_method": 23,          # W
+    "disclosure_exemption": 24,     # X
+    "rights_refusal": 25,           # Y
+    "security_organizational": 26,  # Z
+    "security_technical": 27,       # AA
+    "security_physical": 28,        # AB
+    "security_access_control": 29,  # AC
+    "security_responsibility": 30,  # AD
+    "security_audit": 31,           # AE
+}
+
+def _should_skip_sheet(ws: Worksheet) -> bool:
+    sheet_name = ws.title.lower().strip()
+
+    # skip only real helper/instruction sheets if you have any
+    return sheet_name in {"instruction", "instructions", "คำอธิบาย"}
 
 def _detect_sheet_type(ws: Worksheet) -> str:
     """
     Detect whether a sheet is Controller or Processor.
-    Check sheet name and data pattern.
     """
-    sheet_name = ws.title.lower()
+    sheet_name = ws.title.lower().strip()
+
     if "processor" in sheet_name:
         return "Processor"
     return "Controller"
 
+def _detect_sheet_kind(ws: Worksheet) -> str:
+    """
+    Return one of:
+    - processor
+    - controller
+    - example_controller
+    """
+    sheet_name = ws.title.lower().strip()
+
+    if "processor" in sheet_name:
+        return "processor"
+
+    if "example" in sheet_name or "ตัวอย่าง" in sheet_name:
+        return "example_controller"
+
+    return "controller"
+
+def _sheet_kind_to_role_type(sheet_kind: str) -> str:
+    if sheet_kind == "processor":
+        return "Processor"
+    return "Controller"
+
+def _get_column_map(sheet_kind: str) -> dict:
+    if sheet_kind == "processor":
+        return PROCESSOR_COLUMN_MAP
+
+    if sheet_kind == "example_controller":
+        return EXAMPLE_CONTROLLER_COLUMN_MAP
+
+    return EXAMPLE_CONTROLLER_COLUMN_MAP
 
 def _get_cell_value(row, col_idx: int) -> Optional[str]:
     """Get cell value at 1-based column index (col_idx: 1 = column A, 2 = column B)."""
@@ -165,98 +275,127 @@ def _build_lookup_maps(db: Session) -> dict:
 
 
 def _validate_row(
-    row,
-    row_number: int,
-    sheet_name: str,
-    role_type: str,
-    lookups: dict,
-    inherited_controller: Optional[str] = None,
-    inherited_activity: Optional[str] = None,
-) -> tuple[Optional[ImportRowData], list[ImportRowError]]:
-    """Validate a single row using fixed Thai column positions.
-    
-    Handles flexible column mapping - if column doesn't exist, treats as None.
-    Supports line continuations: if a row has no controller/activity but has personal data,
-    it inherits from the previous row for grouping multiple data types.
-    """
+        row,
+        row_number: int,
+        sheet_name: str,
+        sheet_kind: str,
+        role_type: str,
+        lookups: dict,
+        inherited_controller: Optional[str] = None,
+        inherited_activity: Optional[str] = None,
+    ) -> tuple[Optional[ImportRowData], list[ImportRowError]]:
     errors: list[ImportRowError] = []
+    col_map = _get_column_map(sheet_kind)
 
-    # Helper to safely get column value (returns None if column out of range)
-    def get_col(col_idx: int) -> Optional[str]:
+    def get_col(field_name: str) -> Optional[str]:
+        col_idx = col_map.get(field_name)
+        if not col_idx:
+            return None
         if col_idx <= len(row):
             return _get_cell_value(row, col_idx)
         return None
 
-    # Extract all values - columns that don't exist return None
-    activity_name = get_col(THAI_COLUMN_MAP["activity_name"])
-    controller_name = get_col(THAI_COLUMN_MAP["controller_name"])
-    
-    # Support line continuations: use inherited values if current row has none
+    # Identity
+    controller_name = get_col("controller_name")
+    processor_name = get_col("processor_name")
+    activity_name = get_col("activity_name")
+
+    # For continuation rows
+    inherited_name = inherited_controller
+    current_name = processor_name if role_type == "Processor" else controller_name
+
     if not activity_name and inherited_activity:
         activity_name = inherited_activity
-    if not controller_name and inherited_controller:
-        controller_name = inherited_controller
-    purpose = get_col(THAI_COLUMN_MAP["purpose"])
-    personal_data_desc = get_col(THAI_COLUMN_MAP["personal_data_types"])
-    data_subject_desc = get_col(THAI_COLUMN_MAP["data_subject_categories"])
-    data_type_general = get_col(THAI_COLUMN_MAP["data_type_general"])
-    data_acq_method = get_col(THAI_COLUMN_MAP["data_acquisition_method"])
-    data_src_direct = get_col(THAI_COLUMN_MAP["data_source_direct"])
-    data_src_other = get_col(THAI_COLUMN_MAP["data_source_other"])
-    legal_basis = get_col(THAI_COLUMN_MAP["legal_basis_thai"])
-    cross_border_str = get_col(THAI_COLUMN_MAP["cross_border_transfer"])
-    cross_border_affiliate = get_col(THAI_COLUMN_MAP["cross_border_affiliate"])
-    cross_border_method = get_col(THAI_COLUMN_MAP["cross_border_method"])
-    cross_border_std = get_col(THAI_COLUMN_MAP["cross_border_standard"])
-    cross_border_exc = get_col(THAI_COLUMN_MAP["cross_border_exception"])
-    storage_type = get_col(THAI_COLUMN_MAP.get("storage_type"))
-    storage_method = get_col(THAI_COLUMN_MAP.get("storage_method"))
-    access_rights = get_col(THAI_COLUMN_MAP.get("access_rights"))
-    deletion_method = get_col(THAI_COLUMN_MAP.get("deletion_method"))
-    data_owner = get_col(THAI_COLUMN_MAP.get("data_owner"))
-    retention_period = get_col(THAI_COLUMN_MAP.get("retention_period"))
-    excel_address = get_col(THAI_COLUMN_MAP["address"])
-    
-    # Validate required fields
-    # For Processor: activity_name is often empty, so only validate if we have data
-    # For Controller: activity_name should ideally be present
-    if not activity_name and role_type == "Controller":
-        errors.append(ImportRowError(
-            sheet_name=sheet_name, row_number=row_number,
-            field_name="activity_name", error_reason="กิจกรรมประมวลผล (column 3) is recommended for Controllers",
-        ))
-    
-    # Make sure we have either controller name or activity name (at least one)
-    if not controller_name and not activity_name:
-        errors.append(ImportRowError(
-            sheet_name=sheet_name, row_number=row_number,
-            field_name="row_data", error_reason="Row must have either entity name (column 2) or activity (column 3)",
-        ))
+    if not current_name and inherited_name:
+        current_name = inherited_name
 
-    # Department lookup: Try to infer from controller name or set to None
-    # In flexible mode, department is optional for import (can be assigned later)
+    if role_type == "Processor":
+        processor_name = current_name
+    else:
+        controller_name = current_name
+
+    # Core fields
+    purpose = get_col("purpose")
+    personal_data_desc = get_col("personal_data_types")
+    data_subject_desc = get_col("data_subject_categories")
+    data_type_general = get_col("data_type_general")
+    data_acq_method = get_col("data_acquisition_method")
+    data_src_direct = get_col("data_source_direct")
+    data_src_other = get_col("data_source_other")
+    legal_basis = get_col("legal_basis_thai")
+    legal_basis_gdpr = get_col("legal_basis_gdpr")
+
+    minor_consent_under_10 = get_col("minor_consent_under_10")
+    minor_consent_10_20 = get_col("minor_consent_10_20")
+
+    cross_border_str = get_col("cross_border_transfer")
+    cross_border_affiliate = get_col("cross_border_affiliate")
+    cross_border_method = get_col("cross_border_method")
+    cross_border_std = get_col("cross_border_standard")
+    cross_border_exc = get_col("cross_border_exception")
+
+    storage_type = get_col("storage_type")
+    storage_method = get_col("storage_method")
+    retention_period = get_col("retention_period")
+    access_rights = get_col("access_rights")
+    deletion_method = get_col("deletion_method")
+
+    data_owner = get_col("data_owner")
+    third_party_recipients = get_col("third_party_recipients")
+    disclosure_exemption = get_col("disclosure_exemption")
+    rights_refusal = get_col("rights_refusal")
+
+    security_organizational = get_col("security_organizational")
+    security_technical = get_col("security_technical")
+    security_physical = get_col("security_physical")
+    security_access_control = get_col("security_access_control")
+    security_responsibility = get_col("security_responsibility")
+    security_audit = get_col("security_audit")
+
+    excel_address = get_col("controller_address") or get_col("address")
+
+    # Validation
+    effective_name = processor_name if role_type == "Processor" else controller_name
+
+    if not effective_name and not activity_name:
+        errors.append(
+            ImportRowError(
+                sheet_name=sheet_name,
+                row_number=row_number,
+                field_name="row_data",
+                error_reason="Row must have either entity name or activity name",
+            )
+        )
+
     department_id = None
 
-    # Parse cross_border_transfer as boolean
+    # Parse cross-border boolean
     cross_border_transfer = None
     if cross_border_str:
-        if "มี" in cross_border_str or "yes" in cross_border_str.lower() or "ü" in cross_border_str or "✓" in cross_border_str:
+        v = cross_border_str.strip().lower()
+        if (
+            "มี" in cross_border_str
+            or "yes" in v
+            or "y" == v
+            or "✓" in cross_border_str
+            or "ü" in cross_border_str
+        ):
             cross_border_transfer = True
-        elif "ไม่" in cross_border_str or "no" in cross_border_str.lower():
+        elif "ไม่" in cross_border_str or "no" in v or "n" == v:
             cross_border_transfer = False
 
-    # Detect controller/processor
     controller_id = None
     processor_id = None
     controller_name_stored = None
     processor_name_stored = None
+
     controller_address = None
     controller_email = None
     controller_phone = None
     processor_address = None
     processor_email = None
     processor_phone = None
-    
+
     if role_type == "Controller" and controller_name:
         ctrl = lookups["ctrl_by_name"].get(_normalize_name(controller_name))
         if ctrl:
@@ -265,17 +404,17 @@ def _validate_row(
             controller_email = ctrl.email
             controller_phone = ctrl.phone
         controller_name_stored = controller_name
-        # In flexible mode, don't error if controller not found - log as warning
-    elif role_type == "Processor" and controller_name:
-        proc = lookups["proc_by_name"].get(_normalize_name(controller_name))
+
+    elif role_type == "Processor" and processor_name:
+        proc = lookups["proc_by_name"].get(_normalize_name(processor_name))
         if proc:
             processor_id = proc.id
             processor_address = proc.address
             processor_email = proc.email
             processor_phone = proc.phone
-        processor_name_stored = controller_name
+        processor_name_stored = processor_name
 
-    # Parse data subject categories (comma-separated or using Thai text)
+    # Parse data subject categories
     ds_ids: list[int] = []
     if data_subject_desc:
         categories = ["พนักงาน", "ลูกค้า", "คู่ค้า", "ผู้ติดต่อ", "ผู้สมัคร", "สมาชิก", "อื่น"]
@@ -285,12 +424,14 @@ def _validate_row(
                 if ds:
                     ds_ids.append(ds.id)
 
-    # Parse personal data types (comma-separated or using Thai text)
+    # Parse personal data types
     pdt_ids: list[int] = []
     if personal_data_desc:
-        pdt_keywords = ["ชื่อ", "นามสกุล", "เบอร์โทร", "อีเมล", "ที่อยู่", "เลขประจำตัว", 
-                       "ข้อมูลธนาคาร", "วันเดือนปี", "บัญชี", "บัตร", "รหัส", "สุขภาพ", 
-                       "ศาสนา", "ประวัติ", "ภาพถ่าย", "ลายนิ้วมือ"]
+        pdt_keywords = [
+            "ชื่อ", "นามสกุล", "เบอร์โทร", "อีเมล", "ที่อยู่", "เลขประจำตัว",
+            "ข้อมูลธนาคาร", "วันเดือนปี", "บัญชี", "บัตร", "รหัส", "สุขภาพ",
+            "ศาสนา", "ประวัติ", "ภาพถ่าย", "ลายนิ้วมือ"
+        ]
         for keyword in pdt_keywords:
             if keyword in personal_data_desc:
                 pdt = lookups["pdt_by_name"].get(keyword.lower())
@@ -324,109 +465,123 @@ def _validate_row(
 
         data_subject_category_ids=ds_ids,
         personal_data_type_ids=pdt_ids,
+
         activity_name=activity_name,
         purpose=purpose,
         risk_level=None,
+
         data_acquisition_method=data_acq_method,
         data_source_direct=data_src_direct,
         data_source_other=data_src_other,
+
         legal_basis_thai=legal_basis,
+        legal_basis_gdpr=legal_basis_gdpr,
+
+        minor_consent_under_10=minor_consent_under_10,
+        minor_consent_10_20=minor_consent_10_20,
+
         cross_border_transfer=cross_border_transfer,
         cross_border_affiliate=cross_border_affiliate,
         cross_border_method=cross_border_method,
         cross_border_standard=cross_border_std,
         cross_border_exception=cross_border_exc,
+
         retention_period=retention_period,
         storage_type=storage_type,
         storage_method=storage_method,
         access_rights=access_rights,
         deletion_method=deletion_method,
+
         data_owner=data_owner,
+        third_party_recipients=third_party_recipients,
+        disclosure_exemption=disclosure_exemption,
+        rights_refusal=rights_refusal,
+
+        security_organizational=security_organizational,
+        security_technical=security_technical,
+        security_physical=security_physical,
+        security_access_control=security_access_control,
+        security_responsibility=security_responsibility,
+        security_audit=security_audit,
     )
     return row_data, []
-
 
 def _parse_sheet(
     ws: Worksheet,
     sheet_name: str,
     lookups: dict,
 ) -> tuple[list[ImportRowData], list[ImportRowError], int]:
-    """Parse a Thai ROPA form worksheet.
-    
-    Thai form structure:
-    - Rows 1-4+ are headers (varying by sheet)
-    - Data rows start after headers
-    - Find first data row by looking for sequence number in column 1
-    
-    Returns:
-        Tuple of (valid_rows, errors, row_count)
-        where row_count is the number of rows with actual data (excluding empty rows)
-    """
+    if _should_skip_sheet(ws):
+        return [], [], 0
+
     rows = list(ws.iter_rows(values_only=False))
     if not rows:
         return [], [], 0
 
-    role_type = _detect_sheet_type(ws)
+    sheet_kind = _detect_sheet_kind(ws)
+    role_type = _sheet_kind_to_role_type(sheet_kind)
+    col_map = _get_column_map(sheet_kind)
 
     valid_rows: list[ImportRowData] = []
     all_errors: list[ImportRowError] = []
     rows_with_data = 0
 
-    # Find the first data row (skip headers by looking for numeric sequence number in column 1)
+    # Find first data row by looking for numeric sequence in first column
     first_data_row = None
     for row_idx, row in enumerate(rows):
-        if row_idx < 3:  # Skip first 3 rows (definitely headers)
+        if row_idx < 3:
             continue
-        
+
         seq_cell = row[0] if len(row) > 0 else None
         if seq_cell and seq_cell.value is not None:
-            # Try to convert to int to find row with sequence number
             try:
                 int(seq_cell.value)
                 first_data_row = row_idx
                 break
             except (ValueError, TypeError):
                 continue
-    
-    # If no sequence number found, start from row 5 (0-indexed row 4)
+
     if first_data_row is None:
         first_data_row = 4
 
-    # Parse data rows with support for line continuations
-    prev_controller = None
+    prev_name = None
     prev_activity = None
-    
+
     for row_idx, row in enumerate(rows[first_data_row:], start=first_data_row + 1):
-        # Check if row has required data:
-        # - If current row has NO personal_data: skip if also no controller/activity in current row
-        # - Personal data is required to create a valid row (continuations must have data)
-        activity_val = _get_cell_value(row, THAI_COLUMN_MAP["activity_name"])
-        controller_val = _get_cell_value(row, THAI_COLUMN_MAP["controller_name"])
-        personal_data_val = _get_cell_value(row, THAI_COLUMN_MAP["personal_data_types"])
-        
-        # Skip empty rows: if current row has no personal_data AND no new controller/activity
-        if not personal_data_val and not controller_val and not activity_val:
-            continue  # Skip row with no data at all
-        
-        # Use inherited values for checking if row has required fields
+        name_field = "processor_name" if role_type == "Processor" else "controller_name"
+
+        activity_val = _get_cell_value(row, col_map["activity_name"]) if col_map.get("activity_name") else None
+        name_val = _get_cell_value(row, col_map[name_field]) if col_map.get(name_field) else None
+        personal_data_val = _get_cell_value(row, col_map["personal_data_types"]) if col_map.get("personal_data_types") else None
+
+        if not personal_data_val and not name_val and not activity_val:
+            continue
+
         effective_activity = activity_val or prev_activity
-        effective_controller = controller_val or prev_controller
-        
-        # Skip row if still no data after inheritance attempt
-        if not effective_controller and not effective_activity and not personal_data_val:
-            continue  # Skip entirely empty rows
+        effective_name = name_val or prev_name
+
+        if not effective_name and not effective_activity and not personal_data_val:
+            continue
 
         rows_with_data += 1
+
         parsed, errors = _validate_row(
-            row, row_idx, sheet_name, role_type, lookups,
-            inherited_controller=prev_controller if not controller_val else None,
+            row,
+            row_idx,
+            sheet_name,
+            sheet_kind,
+            role_type,
+            lookups,
+            inherited_controller=prev_name if not name_val else None,
             inherited_activity=prev_activity if not activity_val else None,
         )
+
         if parsed:
             valid_rows.append(parsed)
-            # Update previous row values for next iteration (for line continuation support)
-            prev_controller = parsed.controller_name or prev_controller
+            current_name = parsed.processor_name if role_type == "Processor" else parsed.controller_name
+            prev_name = current_name or prev_name
             prev_activity = parsed.activity_name or prev_activity
+
         all_errors.extend(errors)
 
     return valid_rows, all_errors, rows_with_data
@@ -738,49 +893,57 @@ def confirm_import(
             department_id=dept_id,
             created_by=user_id,
             role_type=row.role_type,
-            status="pending_approval",  # Always start as pending approval per requirements
-            is_deleted=False,  # Newly imported records are not deleted
+            status="pending_approval",
+            is_deleted=False,
             controller_id=controller_id,
             processor_id=processor_id,
+
             # Section 1: Basic Information
             activity_name=row.activity_name,
             purpose=row.purpose,
             risk_level=row.risk_level,
+
             # Section 2: Data Source
             data_acquisition_method=row.data_acquisition_method,
             data_source_direct=row.data_source_direct,
             data_source_other=row.data_source_other,
+
             # Section 3: Legal Basis
             legal_basis_thai=row.legal_basis_thai,
-            # Section 4: Minor Consent (not applicable for Processor) - Excel doesn't have these fields
-            minor_consent_under_10=None,
-            minor_consent_10_20=None,
+
+            # Section 4: Minor Consent
+            minor_consent_under_10=row.minor_consent_under_10,
+            minor_consent_10_20=row.minor_consent_10_20,
+
             # Section 5: Cross-Border Transfer
             cross_border_transfer=row.cross_border_transfer,
             cross_border_affiliate=row.cross_border_affiliate,
             cross_border_method=row.cross_border_method,
             cross_border_standard=row.cross_border_standard,
             cross_border_exception=row.cross_border_exception,
+
             # Section 6: Retention Policy
             retention_period=row.retention_period,
-            retention_expiry_date=None,  # Excel doesn't have this field
-            next_review_date=None,  # Excel doesn't have this field
+            retention_expiry_date=None,
+            next_review_date=None,
             storage_type=row.storage_type,
             storage_method=row.storage_method,
             access_rights=row.access_rights,
             deletion_method=row.deletion_method,
+
             # Section 7: Data Usage/Disclosure
             data_owner=row.data_owner,
-            third_party_recipients=None,  # Excel doesn't have this field
-            disclosure_exemption=None,  # Excel doesn't have this field
-            rights_refusal=None,  # Excel doesn't have this field
-            # Section 8: Security Measures - Excel doesn't have these fields
-            security_organizational=None,
-            security_technical=None,
-            security_physical=None,
-            security_access_control=None,
-            security_responsibility=None,
-            security_audit=None,
+            third_party_recipients=row.third_party_recipients,
+            disclosure_exemption=row.disclosure_exemption,
+            rights_refusal=row.rights_refusal,
+
+            # Section 8: Security Measures
+            security_organizational=row.security_organizational,
+            security_technical=row.security_technical,
+            security_physical=row.security_physical,
+            security_access_control=row.security_access_control,
+            security_responsibility=row.security_responsibility,
+            security_audit=row.security_audit,
         )
         db.add(record)
         db.flush()

@@ -812,6 +812,9 @@ export interface ImportRowData {
   security_access_control?: string | null;
   security_responsibility?: string | null;
   security_audit?: string | null;
+
+  is_duplicate?: boolean;
+  duplicate_record_id?: number | null;
 }
 
 export interface ImportPreviewData {
@@ -835,11 +838,27 @@ export interface ImportBatchData {
   created_at: string;
 }
 
-async function requestFile<T>(path: string, file: File, params?: Record<string, string | number>): Promise<T> {
+export interface ImportConfirmOptions {
+  departmentId?: number;
+  rowMappings?: Record<string, number>;
+}
+
+async function requestFile<T>(
+  path: string,
+  file: File,
+  params?: Record<string, string | number>,
+  extraFormFields?: Record<string, string>
+): Promise<T> {
   const token = getToken();
   const formData = new FormData();
   formData.append("file", file);
-  
+
+  if (extraFormFields) {
+    Object.entries(extraFormFields).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+  }
+
   let finalPath = path;
   if (params && Object.keys(params).length > 0) {
     const query = new URLSearchParams();
@@ -848,37 +867,56 @@ async function requestFile<T>(path: string, file: File, params?: Record<string, 
     });
     finalPath = `${path}?${query.toString()}`;
   }
-  
+
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${finalPath}`, { method: "POST", headers, body: formData });
+  const res = await fetch(`${API_BASE}${finalPath}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
   if (!res.ok) {
     let detail = "เกิดข้อผิดพลาด";
-    try { const body = await res.json(); detail = body.detail || detail; } catch {}
+    try {
+      const body = await res.json();
+      detail = body.detail || detail;
+    } catch {}
+
     if (res.status === 401) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
+
     throw new ApiError(res.status, detail);
   }
+
   return res.json();
 }
 
 export const importApi = {
-  preview: (file: File) => requestFile<ImportPreviewData>("/api/import/preview", file),
-  confirm: (file: File, departmentId?: number) => 
+  preview: (file: File) =>
+    requestFile<ImportPreviewData>("/api/import/preview", file),
+
+  confirm: (file: File, options?: ImportConfirmOptions) =>
     requestFile<ImportBatchData>(
       "/api/import/confirm",
       file,
-      departmentId ? { department_id: departmentId } : undefined
+      options?.departmentId ? { department_id: options.departmentId } : undefined,
+      options?.rowMappings && Object.keys(options.rowMappings).length > 0
+        ? { row_mappings: JSON.stringify(options.rowMappings) }
+        : undefined
     ),
+
   listBatches: (params?: { page?: number; per_page?: number }) => {
     const q = new URLSearchParams();
     if (params?.page) q.set("page", String(params.page));
     if (params?.per_page) q.set("per_page", String(params.per_page));
-    return request<PaginatedResponse<ImportBatchData>>(`/api/import/batches?${q.toString()}`);
+    return request<PaginatedResponse<ImportBatchData>>(
+      `/api/import/batches?${q.toString()}`
+    );
   },
 };
 
