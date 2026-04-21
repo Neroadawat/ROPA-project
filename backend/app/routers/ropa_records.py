@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user, require_admin_or_dpo
+from app.dependencies import get_current_user, require_dpo
 from app.models.user import User
 from app.schemas.ropa_record import (
     ApproveRequest,
@@ -46,7 +46,7 @@ def list_pending_records(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_dpo),
+    current_user: User = Depends(require_dpo),
 ):
     result = ropa_service.list_pending_records(db, page=page, per_page=per_page)
     result["items"] = [RopaRecordListResponse.model_validate(r) for r in result["items"]]
@@ -58,7 +58,7 @@ def approve_record(
     record_id: int,
     body: ApproveRequest = ApproveRequest(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_dpo),
+    current_user: User = Depends(require_dpo),
 ):
     record = ropa_service.approve_ropa_record(db, record_id, current_user)
     return RopaRecordResponse.model_validate(record)
@@ -69,7 +69,7 @@ def reject_record(
     record_id: int,
     body: RejectRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_dpo),
+    current_user: User = Depends(require_dpo),
 ):
     record = ropa_service.reject_ropa_record(db, record_id, body.rejection_reason, current_user)
     return RopaRecordResponse.model_validate(record)

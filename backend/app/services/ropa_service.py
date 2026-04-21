@@ -455,7 +455,7 @@ def reject_ropa_record(db: Session, record_id: int, rejection_reason: str, user:
 
     record.status = "rejected"
     record.rejection_reason = rejection_reason
-    record.rejected_by = user.id
+    record.rejected_by_id = user.id
     record.rejected_at = datetime.now()
 
     db.flush()
