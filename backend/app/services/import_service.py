@@ -372,18 +372,17 @@ def _validate_row(
     # Parse cross-border boolean
     cross_border_transfer = None
     if cross_border_str:
-        v = cross_border_str.strip().lower()
-        if (
-            "มี" in cross_border_str
-            or "yes" in v
-            or "y" == v
-            or "✓" in cross_border_str
-            or "ü" in cross_border_str
-        ):
-            cross_border_transfer = True
-        elif "ไม่" in cross_border_str or "no" in v or "n" == v:
-            cross_border_transfer = False
+        raw = str(cross_border_str).strip()
+        v = raw.lower()
 
+        false_tokens = ["ไม่มี", "ไม่", "no", "n", "false", "0"]
+        true_tokens = ["มี", "yes", "y", "true", "1", "✓", "ü"]
+
+        if any(token in raw for token in ["ไม่มี", "ไม่"]) or v in ["no", "n", "false", "0"]:
+            cross_border_transfer = False
+        elif any(token in raw for token in ["มี", "✓", "ü"]) or v in ["yes", "y", "true", "1"]:
+            cross_border_transfer = True
+            
     controller_id = None
     processor_id = None
     controller_name_stored = None
