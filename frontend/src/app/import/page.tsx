@@ -285,7 +285,7 @@ export default function ImportPage() {
                       <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                       <span className="text-sm font-medium text-foreground">{file.name}</span>
                     </div>
-                    <Button onClick={handlePreview} disabled={uploading || !selectedDepartment} className="rounded-lg gap-1.5 shadow-sm hover:shadow">
+                    <Button onClick={handlePreview} disabled={uploading} className="rounded-lg gap-1.5 shadow-sm hover:shadow">
                       {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังอ่าน...</> : <><Eye className="h-4 w-4" />ตรวจสอบข้อมูล</>}
                     </Button>
                   </>
@@ -384,7 +384,7 @@ export default function ImportPage() {
                           <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 flex items-start gap-3">
                             <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
                             <div className="flex-1 text-xs text-yellow-700">
-                              <p className="font-semibold mb-1">⚠️ ข้อมูลนี้ซ้ำกับ ROPA Record #{row.duplicate_record_id}</p>
+                              <p className="font-semibold mb-1">ข้อมูลนี้ซ้ำกับ ROPA Record #{row.duplicate_record_id}</p>
                               <p>แถวนี้จะไม่ถูกนำเข้าเพราะเป็นข้อมูลซ้ำที่มีอยู่แล้ว</p>
                             </div>
                           </div>
@@ -412,7 +412,7 @@ export default function ImportPage() {
                             </label>
                             {row.controller_id ? (
                               <div className="px-2 py-1.5 border border-green-400 rounded text-xs bg-green-50 text-green-700 font-medium">
-                                ✓ เลือกแล้ว: {preview.controller_options.find(c => c.id === row.controller_id)?.name || `ID: ${row.controller_id}`}
+                                เลือกแล้ว: {preview.controller_options.find(c => c.id === row.controller_id)?.name || `ID: ${row.controller_id}`}
                               </div>
                             ) : (
                               <>
@@ -430,7 +430,7 @@ export default function ImportPage() {
                                   ))}
                                 </select>
                                 <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                  💡 ถ้าไม่เลือก จะสร้างเจ้าของข้อมูลใหม่จากข้อมูลที่ import มา
+                                  ถ้าไม่เลือก จะสร้างเจ้าของข้อมูลใหม่จากข้อมูลที่ import มา
                                 </p>
                               </>
                             )}
@@ -444,7 +444,7 @@ export default function ImportPage() {
                             </label>
                             {row.processor_id ? (
                               <div className="px-2 py-1.5 border border-green-400 rounded text-xs bg-green-50 text-green-700 font-medium">
-                                ✓ เลือกแล้ว: {preview.processor_options.find(p => p.id === row.processor_id)?.name || `ID: ${row.processor_id}`}
+                                เลือกแล้ว: {preview.processor_options.find(p => p.id === row.processor_id)?.name || `ID: ${row.processor_id}`}
                               </div>
                             ) : (
                               <>
@@ -462,7 +462,7 @@ export default function ImportPage() {
                                   ))}
                                 </select>
                                 <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                  💡 ถ้าไม่เลือก จะสร้างผู้ประมวลผลใหม่จากข้อมูลที่ import มา
+                                  ถ้าไม่เลือก จะสร้างผู้ประมวลผลใหม่จากข้อมูลที่ import มา
                                 </p>
                               </>
                             )}
