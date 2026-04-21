@@ -57,7 +57,8 @@ export default function ImportPage() {
       
       const depts = deptRes.items || [];
       setDepartments(depts);
-      setSelectedDepartment(prev => prev || (depts.length > 0 ? depts[0].id : null));
+      // Don't auto-select department - let user choose
+      setSelectedDepartment(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.detail : "ไม่สามารถโหลดข้อมูลได้");
     }
@@ -218,44 +219,74 @@ export default function ImportPage() {
         </div>
 
         {(viewMode === "upload" || viewMode === "preview") && !preview && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Department Selector */}
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <label className="text-sm font-semibold text-blue-900 block mb-2">
-                เลือกแผนกสำหรับการนำเข้า
-              </label>
-              <select
-                value={selectedDepartment || ""}
-                onChange={(e) => setSelectedDepartment(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- เลือกแผนก --</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name} ({dept.code})
-                  </option>
-                ))}
-              </select>
-              {!selectedDepartment && (
-                <p className="text-xs text-blue-700 mt-2">⚠️ ต้องเลือกแผนกก่อนทำการนำเข้า</p>
-              )}
+            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 overflow-hidden">
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  เลือกแผนกสำหรับการนำเข้า
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 ml-10">
+                  ข้อมูลที่นำเข้าจะถูกกำหนดให้กับแผนกที่เลือก
+                </p>
+              </div>
+              <div className="p-6">
+                <select
+                  value={selectedDepartment || ""}
+                  onChange={(e) => setSelectedDepartment(Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all hover:border-slate-400"
+                >
+                  <option value="" disabled>กรุณาเลือกแผนก...</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name} ({dept.code})
+                    </option>
+                  ))}
+                </select>
+                {!selectedDepartment && (
+                  <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-700">
+                      <span className="font-semibold">จำเป็นต้องเลือกแผนก:</span> กรุณาเลือกแผนกก่อนทำการนำเข้าข้อมูล
+                    </p>
+                  </div>
+                )}
+                {selectedDepartment && (
+                  <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-emerald-700">
+                      <span className="font-semibold">แผนกที่เลือก:</span> {departments.find(d => d.id === selectedDepartment)?.name}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* File Upload */}
-            <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-              <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium text-foreground mb-2">เลือกไฟล์ Excel เพื่อนำเข้า</p>
+            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-12 text-center hover:border-primary/50 hover:bg-primary/5 transition-all">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <p className="text-lg font-semibold text-foreground mb-2">เลือกไฟล์ Excel เพื่อนำเข้า</p>
               <p className="text-sm text-muted-foreground mb-6">รองรับเฉพาะไฟล์ .xlsx เท่านั้น</p>
               <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" id="file-upload" />
-              <div className="flex items-center justify-center gap-3">
-                <label htmlFor="file-upload" className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <label htmlFor="file-upload" className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm hover:shadow">
                   <FileSpreadsheet className="h-4 w-4" />เลือกไฟล์
                 </label>
                 {file && (
                   <>
-                    <span className="text-sm text-muted-foreground">{file.name}</span>
-                    <Button onClick={handlePreview} disabled={uploading} className="rounded-lg gap-1.5">
-                      {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังอ่าน...</> : "ตรวจสอบข้อมูล"}
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-slate-200 shadow-sm">
+                      <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-foreground">{file.name}</span>
+                    </div>
+                    <Button onClick={handlePreview} disabled={uploading || !selectedDepartment} className="rounded-lg gap-1.5 shadow-sm hover:shadow">
+                      {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังอ่าน...</> : <><Eye className="h-4 w-4" />ตรวจสอบข้อมูล</>}
                     </Button>
                   </>
                 )}
