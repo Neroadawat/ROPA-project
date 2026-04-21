@@ -12,7 +12,7 @@ import { ShieldCheck, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 
 const DEV_ACCOUNTS = [
   { email: "admin@triangle.com", password: "admin123456", role: "Admin" },
-  { email: "DPO@triangle.com", password: "DPO123456", role: "DPO" },
+  { email: "DPO@triangle.com", password: "12345678", role: "DPO" },
   { email: "Department@triangle.com", password: "Department123456", role: "Department_User" },
   { email: "Auditor@triangle.com", password: "Auditor123456", role: "Viewer_Auditor" },
 ];
