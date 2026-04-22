@@ -1,0 +1,131 @@
+name: Automated Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Backend API Tests (Robot Framework) ─────────────────────
+  robot-tests:
+    name: Robot Framework API Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Install Robot Framework
+        run: pip install robotframework robotframework-requests robotframework-jsonlibrary
+
+      - name: Start backend server
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          JWT_SECRET_KEY: test-secret-key-for-ci-only
+          JWT_ALGORITHM: HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 60
+          CORS_ORIGINS: "*"
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            curl -sf http://localhost:8000/health && break
+            sleep 2
+          done
+
+      - name: Run Robot Framework tests
+        working-directory: backend
+        env:
+          BASE_URL: http://localhost:8000
+        run: |
+          robot \
+            --outputdir tests/robot/results \
+            --output output.xml \
+            --log log.html \
+            --report report.html \
+            tests/robot/
+
+      - name: Upload Robot Framework report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-test-report
+          path: |
+            backend/tests/robot/results/report.html
+            backend/tests/robot/results/log.html
+            backend/tests/robot/results/output.xml
+          retention-days: 30
+
+  # ─── Frontend E2E Tests (Playwright) ─────────────────────────
+  playwright-tests:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        env:
+          CI: true
+        run: npx playwright test --reporter=html,list
+
+      - name: Upload Playwright HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-test-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (screenshots/traces on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 7

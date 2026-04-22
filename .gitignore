@@ -48,6 +48,14 @@ htmlcov/
 .tox/
 .nox/
 
+# Robot Framework - generated results (re-generated every run)
+backend/tests/robot/results/
+
+# Playwright - generated reports and artifacts (re-generated every run)
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
 # Alembic
 alembic/versions/__pycache__/
 
