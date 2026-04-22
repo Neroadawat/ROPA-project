@@ -91,7 +91,7 @@ export default function LoginPage() {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
             <h2 className="text-5xl font-bold leading-[1.15] mb-6 tracking-tight">
               ROPA<br />
-              <span className="bg-gradient-to-r from-red-400 via-rose-400 to-orange-400 bg-clip-text text-transparent">By Lonein</span>
+              <span className="bg-gradient-to-r from-red-400 via-rose-400 to-orange-400 bg-clip-text text-transparent">By LONEI</span>
             </h2>
             <p className="text-base text-white/60 leading-relaxed max-w-sm">
               รวมศูนย์ข้อมูลกิจกรรมการประมวลผลข้อมูลส่วนบุคคล
