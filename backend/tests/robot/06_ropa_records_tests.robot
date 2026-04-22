@@ -201,21 +201,114 @@ TC-ROPA-009 Viewer Cannot Create ROPA Record
     Response Should Be Forbidden    ${resp}
 
 # ---------------------------------------------------------------------------
-# TC-ROPA-010: ดู Retention Alerts
+# TC-ROPA-010: ดู Retention Alerts (flat response format)
 # ---------------------------------------------------------------------------
 TC-ROPA-010 Get Retention Alerts
-    [Documentation]    GET /api/ropa-records/retention-alerts ต้องได้ response ถูกต้อง
-    [Tags]    ropa    positive
+    [Documentation]    GET /api/ropa-records/retention-alerts ต้องได้ flat response ที่มี 4 categories
+    [Tags]    ropa    positive    retention
     ${headers}=    Auth Header    ${ADMIN_TOKEN}
     ${resp}=    GET On Session    ropa    /api/ropa-records/retention-alerts    headers=${headers}
     Response Should Be OK    ${resp}
-    # response มี structure: { "alerts": { overdue, within_30, within_60_90, review_overdue }, "summary": {...} }
-    Dictionary Should Contain Key    ${resp.json()}    alerts
-    Dictionary Should Contain Key    ${resp.json()}    summary
-    Dictionary Should Contain Key    ${resp.json()['alerts']}    overdue
-    Dictionary Should Contain Key    ${resp.json()['alerts']}    within_30
-    Dictionary Should Contain Key    ${resp.json()['alerts']}    within_60_90
-    Dictionary Should Contain Key    ${resp.json()['alerts']}    review_overdue
+    # response ต้องเป็น flat format: { overdue: [], within_30: [], within_60_90: [], review_overdue: [] }
+    Dictionary Should Contain Key    ${resp.json()}    overdue
+    Dictionary Should Contain Key    ${resp.json()}    within_30
+    Dictionary Should Contain Key    ${resp.json()}    within_60_90
+    Dictionary Should Contain Key    ${resp.json()}    review_overdue
+    # ต้องไม่มี nested "alerts" หรือ "summary" key
+    Dictionary Should Not Contain Key    ${resp.json()}    alerts
+    Dictionary Should Not Contain Key    ${resp.json()}    summary
+    # แต่ละ category ต้องเป็น list
+    ${overdue_type}=    Evaluate    type($resp.json()['overdue']).__name__
+    Should Be Equal As Strings    ${overdue_type}    list
+
+# ---------------------------------------------------------------------------
+# TC-ROPA-010b: Retention Alerts — filter by urgency
+# ---------------------------------------------------------------------------
+TC-ROPA-010b Retention Alerts Filter By Urgency
+    [Documentation]    GET /api/ropa-records/retention-alerts?urgency=overdue ต้อง return เฉพาะ overdue มีข้อมูล
+    [Tags]    ropa    positive    retention
+    ${headers}=    Auth Header    ${ADMIN_TOKEN}
+    ${params}=    Create Dictionary    urgency=overdue
+    ${resp}=    GET On Session    ropa    /api/ropa-records/retention-alerts    headers=${headers}    params=${params}
+    Response Should Be OK    ${resp}
+    Dictionary Should Contain Key    ${resp.json()}    overdue
+    # keys อื่นต้องเป็น empty list (response_model fills defaults)
+    ${within_30}=    Set Variable    ${resp.json()['within_30']}
+    ${within_30_len}=    Get Length    ${within_30}
+    Should Be Equal As Integers    ${within_30_len}    0
+    ${within_60_90}=    Set Variable    ${resp.json()['within_60_90']}
+    ${within_60_90_len}=    Get Length    ${within_60_90}
+    Should Be Equal As Integers    ${within_60_90_len}    0
+    ${review_overdue}=    Set Variable    ${resp.json()['review_overdue']}
+    ${review_overdue_len}=    Get Length    ${review_overdue}
+    Should Be Equal As Integers    ${review_overdue_len}    0
+
+# ---------------------------------------------------------------------------
+# TC-ROPA-010c: Retention Alerts — filter by department
+# ---------------------------------------------------------------------------
+TC-ROPA-010c Retention Alerts Filter By Department
+    [Documentation]    GET /api/ropa-records/retention-alerts?department_id=X ต้อง return ได้
+    [Tags]    ropa    positive    retention
+    ${headers}=    Auth Header    ${ADMIN_TOKEN}
+    ${params}=    Create Dictionary    department_id=${DEPT_ID}
+    ${resp}=    GET On Session    ropa    /api/ropa-records/retention-alerts    headers=${headers}    params=${params}
+    Response Should Be OK    ${resp}
+    Dictionary Should Contain Key    ${resp.json()}    overdue
+
+# ---------------------------------------------------------------------------
+# TC-ROPA-010d: Retention Alerts — alert item มี fields ครบ
+# ---------------------------------------------------------------------------
+TC-ROPA-010d Retention Alert Item Has Correct Fields
+    [Documentation]    สร้าง ROPA record ที่มี retention_expiry_date เป็นอดีต แล้วเช็คว่า alert item มี fields ครบ
+    [Tags]    ropa    positive    retention
+    ${headers}=    Auth Header    ${ADMIN_TOKEN}
+    # สร้าง record ที่มี retention_expiry_date เป็นวันที่ผ่านมาแล้ว
+    ${body}=    Build ROPA Body    กิจกรรมทดสอบ Retention Alert
+    Set To Dictionary    ${body}    retention_expiry_date=2025-01-01
+    Set To Dictionary    ${body}    next_review_date=2025-06-01
+    ${create_resp}=    POST On Session    ropa    /api/ropa-records    json=${body}    headers=${headers}
+    ${record_id}=    Set Variable    ${create_resp.json()['id']}
+    # Approve ด้วย DPO
+    ${unique}=    Generate Random String    6    [NUMBERS]
+    ${dpo_body}=    Create Dictionary
+    ...    email=dpo_ret_${unique}@test.com
+    ...    name=DPO Retention Test
+    ...    password=dpopass123
+    ...    role=DPO
+    POST On Session    ropa    /api/users    json=${dpo_body}    headers=${headers}
+    ${dpo_token}=    Get Auth Token    dpo_ret_${unique}@test.com    dpopass123
+    ${dpo_headers}=    Auth Header    ${dpo_token}
+    POST On Session    ropa    /api/ropa-records/${record_id}/approve    headers=${dpo_headers}
+    # ดึง retention alerts
+    ${resp}=    GET On Session    ropa    /api/ropa-records/retention-alerts    headers=${headers}
+    Response Should Be OK    ${resp}
+    # ต้องมี record ใน overdue (เพราะ 2025-01-01 < today)
+    ${overdue_list}=    Set Variable    ${resp.json()['overdue']}
+    ${found}=    Set Variable    ${FALSE}
+    FOR    ${item}    IN    @{overdue_list}
+        IF    ${item['id']} == ${record_id}
+            ${found}=    Set Variable    ${TRUE}
+            # ตรวจสอบ fields ที่ต้องมี
+            Dictionary Should Contain Key    ${item}    id
+            Dictionary Should Contain Key    ${item}    activity_name
+            Dictionary Should Contain Key    ${item}    department_name
+            Dictionary Should Contain Key    ${item}    retention_expiry_date
+            Dictionary Should Contain Key    ${item}    next_review_date
+            Dictionary Should Contain Key    ${item}    urgency
+            Should Be Equal As Strings    ${item['urgency']}    overdue
+            Should Be Equal As Strings    ${item['activity_name']}    กิจกรรมทดสอบ Retention Alert
+        END
+    END
+    Should Be True    ${found}    Record ${record_id} not found in overdue alerts
+
+# ---------------------------------------------------------------------------
+# TC-ROPA-010e: Retention Alerts — ไม่มี token ต้องได้ 401
+# ---------------------------------------------------------------------------
+TC-ROPA-010e Retention Alerts Without Token
+    [Documentation]    GET /api/ropa-records/retention-alerts โดยไม่มี token ต้องได้ 401
+    [Tags]    ropa    negative    retention
+    ${resp}=    GET On Session    ropa    /api/ropa-records/retention-alerts    expected_status=any
+    Response Should Be Unauthorized    ${resp}
 
 # ---------------------------------------------------------------------------
 # TC-ROPA-011: ดู Version History ของ ROPA Record

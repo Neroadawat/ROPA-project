@@ -87,11 +87,18 @@ TC-DASH-007 Dashboard Sensitive Data Mapping
 # TC-DASH-008: GET /api/dashboard/retention-alerts
 # ---------------------------------------------------------------------------
 TC-DASH-008 Dashboard Retention Alerts
-    [Documentation]    GET /api/dashboard/retention-alerts ต้องได้สรุป retention alerts
-    [Tags]    dashboard    positive
+    [Documentation]    GET /api/dashboard/retention-alerts ต้องได้สรุป retention alerts เป็นตัวเลข
+    [Tags]    dashboard    positive    retention
     ${headers}=    Auth Header    ${ADMIN_TOKEN}
     ${resp}=    GET On Session    ropa    /api/dashboard/retention-alerts    headers=${headers}
     Response Should Be OK    ${resp}
+    Dictionary Should Contain Key    ${resp.json()}    overdue
+    Dictionary Should Contain Key    ${resp.json()}    within_30
+    Dictionary Should Contain Key    ${resp.json()}    within_60_90
+    Dictionary Should Contain Key    ${resp.json()}    review_overdue
+    # ค่าต้องเป็นตัวเลข (int)
+    ${overdue_type}=    Evaluate    type($resp.json()['overdue']).__name__
+    Should Be Equal As Strings    ${overdue_type}    int
 
 # ---------------------------------------------------------------------------
 # TC-DASH-009: Dashboard โดยไม่มี token ต้องได้ 401

@@ -558,6 +558,19 @@ def compare_record_versions(
 # Retention Alerts
 # ---------------------------------------------------------------------------
 
+def _record_to_alert_item(rec: RopaRecord, urgency_label: str) -> dict:
+    """Convert a RopaRecord ORM object to a flat RetentionAlertItem dict."""
+    return {
+        "id": rec.id,
+        "process_name": rec.activity_name,
+        "activity_name": rec.activity_name,
+        "department_name": rec.department.name if rec.department else "N/A",
+        "retention_expiry_date": rec.retention_expiry_date.isoformat() if rec.retention_expiry_date else None,
+        "next_review_date": rec.next_review_date.isoformat() if rec.next_review_date else None,
+        "urgency": urgency_label,
+    }
+
+
 def get_retention_alerts(
     db: Session,
     user: User,
@@ -569,10 +582,10 @@ def get_retention_alerts(
     Categories:
       - overdue: retention_expiry_date < today
       - within_30: retention_expiry_date within 30 days from today
-      - within_60_90: retention_expiry_date within 60-90 days from today
+      - within_60_90: retention_expiry_date within 31-90 days from today
       - review_overdue: next_review_date < today
 
-    Returns dict with categorised record lists and summary counts.
+    Returns flat dict matching RetentionAlertResponse schema.
     """
     today = date.today()
 
@@ -591,18 +604,18 @@ def get_retention_alerts(
 
     retention_records = retention_query.all()
 
-    overdue: list[RopaRecord] = []
-    within_30: list[RopaRecord] = []
-    within_60_90: list[RopaRecord] = []
+    overdue: list[dict] = []
+    within_30: list[dict] = []
+    within_60_90: list[dict] = []
 
     for rec in retention_records:
         expiry = rec.retention_expiry_date
         if expiry < today:
-            overdue.append(rec)
+            overdue.append(_record_to_alert_item(rec, "overdue"))
         elif expiry <= today + timedelta(days=30):
-            within_30.append(rec)
-        elif today + timedelta(days=60) <= expiry <= today + timedelta(days=90):
-            within_60_90.append(rec)
+            within_30.append(_record_to_alert_item(rec, "within_30"))
+        elif expiry <= today + timedelta(days=90):
+            within_60_90.append(_record_to_alert_item(rec, "within_60_90"))
 
     # --- Review-based alerts (require next_review_date) ------------------
     review_query = (
@@ -618,10 +631,12 @@ def get_retention_alerts(
     if department_id is not None:
         review_query = review_query.filter(RopaRecord.department_id == department_id)
 
-    review_overdue: list[RopaRecord] = review_query.all()
+    review_overdue: list[dict] = [
+        _record_to_alert_item(rec, "review_overdue") for rec in review_query.all()
+    ]
 
-    # --- Apply urgency filter if requested --------------------------------
-    alerts: dict[str, list[RopaRecord]] = {
+    # --- Build flat response matching RetentionAlertResponse schema ------
+    result: dict[str, list[dict]] = {
         "overdue": overdue,
         "within_30": within_30,
         "within_60_90": within_60_90,
@@ -630,11 +645,6 @@ def get_retention_alerts(
 
     if urgency:
         requested = set(urgency.split(","))
-        alerts = {k: v for k, v in alerts.items() if k in requested}
+        result = {k: v for k, v in result.items() if k in requested}
 
-    summary = {k: len(v) for k, v in alerts.items()}
-
-    return {
-        "alerts": alerts,
-        "summary": summary,
-    }
+    return result

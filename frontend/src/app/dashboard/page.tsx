@@ -370,7 +370,7 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <AlertCard label="เกินกำหนด" count={retention.overdue} color="red" />
                 <AlertCard label="ภายใน 30 วัน" count={retention.within_30} color="amber" />
-                <AlertCard label="ภายใน 60-90 วัน" count={retention.within_60_90} color="blue" />
+                <AlertCard label="ภายใน 31-90 วัน" count={retention.within_60_90} color="blue" />
                 <AlertCard label="เกินกำหนดทบทวน" count={retention.review_overdue} color="red" />
               </div>
             </CardContent>

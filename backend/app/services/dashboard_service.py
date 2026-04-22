@@ -28,7 +28,11 @@ _COMPLETENESS_FIELDS = [
 def _dept_scope(query, user: User):
     """Auto-filter by department for Department_User role."""
     if user.role == "Department_User":
-        query = query.filter(RopaRecord.department_id == user.department_id)
+        if user.department_id is None:
+            # Department_User without a department should see nothing
+            query = query.filter(RopaRecord.id == -1)
+        else:
+            query = query.filter(RopaRecord.department_id == user.department_id)
     return query
 
 
@@ -292,7 +296,7 @@ def get_retention_alerts_summary(db: Session, user: User) -> dict:
             overdue += 1
         elif expiry <= today + timedelta(days=30):
             within_30 += 1
-        elif today + timedelta(days=60) <= expiry <= today + timedelta(days=90):
+        elif expiry <= today + timedelta(days=90):
             within_60_90 += 1
 
     # Review-based

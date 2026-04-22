@@ -12,6 +12,7 @@ from app.schemas.ropa_record import (
     PaginatedRopaRecordList,
     RecordVersionResponse,
     RejectRequest,
+    RetentionAlertResponse,
     RopaRecordCreate,
     RopaRecordListResponse,
     RopaRecordResponse,
@@ -27,7 +28,7 @@ router = APIRouter()
 # Retention Alerts (placed before /{id} to avoid path conflict)
 # ---------------------------------------------------------------------------
 
-@router.get("/retention-alerts")
+@router.get("/retention-alerts", response_model=RetentionAlertResponse)
 def get_retention_alerts(
     urgency: str | None = Query(None, description="Comma-separated: overdue,within_30,within_60_90,review_overdue"),
     department_id: int | None = Query(None),

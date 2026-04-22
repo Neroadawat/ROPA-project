@@ -350,3 +350,28 @@ class VersionCompareResponse(BaseModel):
     version_1: RecordVersionResponse
     version_2: RecordVersionResponse
     changes: list[VersionChange]
+
+
+# --- Retention Alert schemas ---
+
+class RetentionAlertItem(BaseModel):
+    """A single retention alert record."""
+
+    id: int
+    process_name: Optional[str] = None
+    activity_name: Optional[str] = None
+    department_name: str
+    retention_expiry_date: Optional[date] = None
+    next_review_date: Optional[date] = None
+    urgency: str  # "overdue" | "within_30" | "within_60_90" | "review_overdue"
+
+    model_config = ConfigDict(from_attributes=False)
+
+
+class RetentionAlertResponse(BaseModel):
+    """Flat response with categorised retention alert items."""
+
+    overdue: list[RetentionAlertItem] = []
+    within_30: list[RetentionAlertItem] = []
+    within_60_90: list[RetentionAlertItem] = []
+    review_overdue: list[RetentionAlertItem] = []

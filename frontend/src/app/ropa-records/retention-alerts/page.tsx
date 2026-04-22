@@ -13,7 +13,7 @@ import { ropaRecordsApi, ApiError, type RetentionAlertData, type RetentionAlertI
 const URGENCY_CONFIG: Record<string, { label: string; variant: "danger" | "warning" | "info" | "default"; icon: string }> = {
   overdue: { label: "เกินกำหนด", variant: "danger", icon: "🔴" },
   within_30: { label: "ภายใน 30 วัน", variant: "warning", icon: "🟠" },
-  within_60_90: { label: "ภายใน 60-90 วัน", variant: "info", icon: "🟡" },
+  within_60_90: { label: "ภายใน 31-90 วัน", variant: "info", icon: "🟡" },
   review_overdue: { label: "เกินกำหนดทบทวน", variant: "danger", icon: "🔴" },
 };
 
@@ -122,7 +122,7 @@ export default function RetentionAlertsPage() {
               onView={(id) => router.push(`/ropa-records/${id}`)} />
             <AlertSection title="หมดอายุภายใน 30 วัน" items={alerts.within_30} variant="warning" icon="🟠"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
-            <AlertSection title="หมดอายุภายใน 60-90 วัน" items={alerts.within_60_90} variant="info" icon="🟡"
+            <AlertSection title="หมดอายุภายใน 31-90 วัน" items={alerts.within_60_90} variant="info" icon="🟡"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
           </>
         )}
