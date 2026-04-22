@@ -47,14 +47,13 @@ def _set_col_width(ws, col: int, width: float):
 # Each entry: (group_label, sub_label, field, width)
 # group_label=None → merge with previous group cell
 CONTROLLER_COLS = [
-    # group,                                          sub,                                                    field,                      w
     ("ลำดับ",                                          None,                                                   "__seq__",                  6),
-    ("1. ชื่อเจ้าของข้อมูลส่วนบุคคล",                  None,                                                   "data_subject_categories",  28),
+    ("1. ชื่อเจ้าของข้อมูลส่วนบุคคล",                  None,                                                   "data_subject_names",       28),
     ("2. กิจกรรมประมวลผล",                             None,                                                   "activity_name",            28),
     ("3. วัตถุประสงค์ของการประมวลผล",                  None,                                                   "purpose",                  28),
-    ("4. ข้อมูลส่วนบุคคลที่จัดเก็บ",                   None,                                                   "personal_data_types",      28),
-    ("5. หมวดหมู่ของข้อมูล",                           None,                                                   "data_subject_categories",  22),
-    ("6. ประเภทของข้อมูล",                             None,                                                   "personal_data_types",      22),
+    ("4. ข้อมูลส่วนบุคคลที่จัดเก็บ",                   None,                                                   "personal_data_names",      28),
+    ("5. หมวดหมู่ของข้อมูล",                           None,                                                   "personal_data_categories", 22),
+    ("6. ประเภทของข้อมูล",                             None,                                                   "personal_data_sensitivity",22),
     ("7. วิธีการได้มาซึ่งข้อมูล",                      None,                                                   "data_acquisition_method",  22),
     ("8. แหล่งที่ได้มาซึ่งข้อมูล",                     "จากเจ้าของข้อมูลโดยตรง",                               "data_source_direct",       22),
     (None,                                             "จากแหล่งอื่น",                                         "data_source_other",        22),
@@ -81,16 +80,15 @@ CONTROLLER_COLS = [
     (None,                                             "มาตรการตรวจสอบย้อนหลัง",                               "security_audit",           22),
 ]
 
-# ─── Processor columns ─────────────────────────────────────────────────────────
 PROCESSOR_COLS = [
     ("ลำดับ",                                          None,                                                   "__seq__",                  6),
     ("1. ชื่อผู้ประมวลผลข้อมูลส่วนบุคคล",              None,                                                   "processor_name",           28),
     ("2. ที่อยู่ผู้ควบคุมข้อมูลส่วนบุคคล",             None,                                                   "source_controller",        28),
     ("3. กิจกรรมประมวลผล",                             None,                                                   "activity_name",            28),
     ("4. วัตถุประสงค์ของการประมวลผล",                  None,                                                   "purpose",                  28),
-    ("5. ข้อมูลส่วนบุคคลที่จัดเก็บ",                   None,                                                   "personal_data_types",      28),
-    ("6. หมวดหมู่ของข้อมูล",                           None,                                                   "data_subject_categories",  22),
-    ("7. ประเภทของข้อมูล",                             None,                                                   "data_category",            22),
+    ("5. ข้อมูลส่วนบุคคลที่จัดเก็บ",                   None,                                                   "personal_data_names",      28),
+    ("6. หมวดหมู่ของข้อมูล",                           None,                                                   "personal_data_categories", 22),
+    ("7. ประเภทของข้อมูล",                             None,                                                   "personal_data_sensitivity",22),
     ("8. วิธีการได้มาซึ่งข้อมูล",                      None,                                                   "data_acquisition_method",  22),
     ("9. แหล่งที่ได้มาซึ่งข้อมูล",                     "จากเจ้าของผู้ควบคุมโดยตรง",                            "data_source_direct",       22),
     (None,                                             "จากแหล่งอื่น",                                         "data_source_other",        22),
@@ -117,10 +115,21 @@ PROCESSOR_COLS = [
 def _get_value(record: RopaRecord, field: str) -> str | None:
     if field == "__seq__":
         return None  # filled separately
-    if field == "data_subject_categories":
-        return ", ".join(ds.name for ds in record.data_subjects) if record.data_subjects else None
-    if field == "personal_data_types":
-        return ", ".join(pdt.name for pdt in record.personal_data_types) if record.personal_data_types else None
+    if field == "data_subject_names":
+        # ชื่อกลุ่มเจ้าของข้อมูล เช่น ลูกค้า, พนักงาน
+        return "\n".join(ds.name for ds in record.data_subjects) if record.data_subjects else None
+    if field == "personal_data_names":
+        # ชื่อข้อมูลส่วนบุคคลที่จัดเก็บ เช่น ชื่อ-นามสกุล, เลขบัตร
+        return "\n".join(pdt.name for pdt in record.personal_data_types) if record.personal_data_types else None
+    if field == "personal_data_categories":
+        # หมวดหมู่ของข้อมูล (category field ของ PersonalDataType)
+        cats = list({pdt.category for pdt in record.personal_data_types if pdt.category})
+        return ", ".join(cats) if cats else None
+    if field == "personal_data_sensitivity":
+        # ประเภท general/sensitive
+        levels = list({pdt.sensitivity_level for pdt in record.personal_data_types if pdt.sensitivity_level})
+        label_map = {"general": "ข้อมูลทั่วไป", "sensitive": "ข้อมูลอ่อนไหว"}
+        return ", ".join(label_map.get(l, l) for l in levels) if levels else None
     if field == "processor_name":
         return record.processor.name if record.processor else None
     if field == "source_controller":
@@ -145,73 +154,67 @@ def _write_sheet(ws, records: list[RopaRecord], cols: list, sheet_title: str):
     num_cols = len(cols)
 
     # ── Row 1: title banner ──────────────────────────────────────────────────
-    ws.row_dimensions[1].height = 22
+    ws.row_dimensions[1].height = 28
     title_cell = ws.cell(row=1, column=1, value=sheet_title)
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=num_cols)
     _style(title_cell, font=Font(bold=True, color="1F3864", name="TH SarabunPSK", size=14),
            fill=LIGHT_BLUE, alignment=CENTER)
 
-    # ── Rows 2-3: group headers + sub-headers ────────────────────────────────
+    # ── Row 2: group headers ─────────────────────────────────────────────────
     ws.row_dimensions[2].height = 52
-    ws.row_dimensions[3].height = 52
 
-    group_start = None
-    group_label = None
+    # First pass: write group labels and track merge ranges
+    current_group = None
+    group_start_col = None
 
     for ci, (grp, sub, field, width) in enumerate(cols, start=1):
         _set_col_width(ws, ci, width)
 
         if grp is not None:
-            # Close previous group merge if needed
-            if group_start is not None and group_start < ci - 1:
-                ws.merge_cells(start_row=2, start_column=group_start,
-                               end_row=2, end_column=ci - 1)
-            group_start = ci
-            group_label = grp
+            # New group starts — close previous group merge
+            if current_group is not None and group_start_col is not None and group_start_col < ci:
+                if ci - 1 > group_start_col:
+                    ws.merge_cells(start_row=2, start_column=group_start_col, end_row=2, end_column=ci - 1)
+            current_group = grp
+            group_start_col = ci
 
-        if sub is None:
-            # Single-row header — merge rows 2-3
-            cell2 = ws.cell(row=2, column=ci, value=group_label if grp is not None else "")
-            ws.merge_cells(start_row=2, start_column=ci, end_row=3, end_column=ci)
-            _style(cell2, font=WHITE_BOLD, fill=DARK_BLUE, alignment=CENTER, border=THIN_BORDER)
-        else:
-            # Group header in row 2, sub-header in row 3
-            if grp is not None:
-                cell2 = ws.cell(row=2, column=ci, value=group_label)
+            if sub is None:
+                # No sub-header → merge row 2-3
+                cell2 = ws.cell(row=2, column=ci, value=grp)
+                ws.merge_cells(start_row=2, start_column=ci, end_row=3, end_column=ci)
                 _style(cell2, font=WHITE_BOLD, fill=DARK_BLUE, alignment=CENTER, border=THIN_BORDER)
-            cell3 = ws.cell(row=3, column=ci, value=sub)
-            _style(cell3, font=WHITE_BOLD, fill=MED_BLUE, alignment=CENTER, border=THIN_BORDER)
+                # Style row 3 cell too (for border)
+                _style(ws.cell(row=3, column=ci), font=WHITE_BOLD, fill=DARK_BLUE, alignment=CENTER, border=THIN_BORDER)
+            else:
+                # Has sub-header → write group in row 2
+                cell2 = ws.cell(row=2, column=ci, value=grp)
+                _style(cell2, font=WHITE_BOLD, fill=DARK_BLUE, alignment=CENTER, border=THIN_BORDER)
+        else:
+            # Continuation of previous group (grp=None)
+            # Don't write anything in row 2 — will be merged
+            pass
 
     # Close last group merge
-    if group_start is not None and group_start < num_cols:
-        # find last col with same group
-        last = num_cols
-        for ci in range(group_start + 1, num_cols + 1):
-            if cols[ci - 1][0] is not None and ci > group_start:
-                last = ci - 1
-                break
-        # merge row-2 cells for groups that have sub-headers
-        # (already handled per-cell above; just ensure row-2 group cells are merged)
+    if current_group is not None and group_start_col is not None and group_start_col < num_cols:
+        last_col_of_group = num_cols
+        if last_col_of_group > group_start_col:
+            # Only merge if the group has sub-headers
+            has_sub = any(cols[i][1] is not None for i in range(group_start_col - 1, last_col_of_group))
+            if has_sub:
+                ws.merge_cells(start_row=2, start_column=group_start_col, end_row=2, end_column=last_col_of_group)
 
-    # Re-pass to merge row-2 group cells across their sub-columns
-    ci = 1
-    while ci <= num_cols:
-        grp, sub, _, _ = cols[ci - 1]
-        if grp is not None and sub is not None:
-            # find how many consecutive cols share this group (grp=None means continuation)
-            end = ci
-            while end + 1 <= num_cols and cols[end][0] is None:
-                end += 1
-            if end > ci:
-                ws.merge_cells(start_row=2, start_column=ci, end_row=2, end_column=end)
-                # re-style merged cell
-                cell2 = ws.cell(row=2, column=ci)
-                _style(cell2, font=WHITE_BOLD, fill=DARK_BLUE, alignment=CENTER, border=THIN_BORDER)
-            ci = end + 1
-        else:
-            ci += 1
+    # ── Row 3: sub-headers ───────────────────────────────────────────────────
+    ws.row_dimensions[3].height = 52
 
-    # ── Data rows ────────────────────────────────────────────────────────────
+    for ci, (grp, sub, field, width) in enumerate(cols, start=1):
+        if sub is not None:
+            cell3 = ws.cell(row=3, column=ci, value=sub)
+            _style(cell3, font=WHITE_BOLD, fill=MED_BLUE, alignment=CENTER, border=THIN_BORDER)
+        elif grp is None:
+            # Continuation column without sub — empty but styled
+            _style(ws.cell(row=3, column=ci), font=WHITE_BOLD, fill=MED_BLUE, alignment=CENTER, border=THIN_BORDER)
+
+    # ── Data rows (starting from row 4) ──────────────────────────────────────
     for ri, record in enumerate(records, start=1):
         row = 3 + ri
         ws.row_dimensions[row].height = 18
