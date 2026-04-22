@@ -61,6 +61,16 @@ jobs:
             sleep 2
           done
 
+      - name: Seed test users
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          JWT_SECRET_KEY: test-secret-key-for-ci-only
+          JWT_ALGORITHM: HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 60
+          CORS_ORIGINS: "*"
+        run: python seed_test_users.py
+
       - name: Run Robot Framework tests
         working-directory: backend
         env:
