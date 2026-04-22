@@ -121,10 +121,16 @@ def _write_sheet(ws, records: list[RopaRecord], columns: list[tuple[str, str]]) 
         ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = min(max_len + 2, 50)
 
 
-def export_excel(db: Session, user_id: int) -> bytes:
-    """Generate an Excel file with Controller and Processor sheets."""
-    # Query all non-deleted ROPA records with relationships
-    records = (
+def export_excel(db: Session, user_id: int, 
+                 search: str | None = None,
+                 department_id: int | None = None,
+                 role_type: str | None = None,
+                 risk_level: str | None = None,
+                 status: str | None = None) -> bytes:
+    """Generate an Excel file filtered by the given parameters."""
+    from app.models.department import Department
+
+    query = (
         db.query(RopaRecord)
         .filter(RopaRecord.is_deleted == False)
         .options(
@@ -134,8 +140,28 @@ def export_excel(db: Session, user_id: int) -> bytes:
             joinedload(RopaRecord.data_subjects),
             joinedload(RopaRecord.personal_data_types),
         )
-        .all()
     )
+
+    # Apply filters
+    if status:
+        query = query.filter(RopaRecord.status == status)
+    else:
+        # Default: export only approved records
+        query = query.filter(RopaRecord.status == "approved")
+
+    if department_id:
+        query = query.filter(RopaRecord.department_id == department_id)
+
+    if role_type:
+        query = query.filter(RopaRecord.role_type == role_type)
+
+    if risk_level:
+        query = query.filter(RopaRecord.risk_level == risk_level)
+
+    if search:
+        query = query.filter(RopaRecord.activity_name.ilike(f"%{search}%"))
+
+    records = query.all()
 
     controller_records = [r for r in records if r.role_type == "Controller"]
     processor_records = [r for r in records if r.role_type == "Processor"]
@@ -172,7 +198,7 @@ def export_excel(db: Session, user_id: int) -> bytes:
             "processor_count": len(processor_records),
             "total_records": len(records),
         },
-        reason=f"Exported {len(records)} ROPA records to Excel",
+        reason=f"Exported {len(records)} approved ROPA records to Excel",
     )
 
     return file_bytes

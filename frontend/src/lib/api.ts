@@ -921,11 +921,26 @@ export const importApi = {
 };
 
 export const exportApi = {
-  excel: async () => {
+  excel: async (params?: {
+    search?: string;
+    department_id?: number;
+    role_type?: string;
+    risk_level?: string;
+    status?: string;
+  }) => {
     const token = getToken();
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/api/export/excel`, { headers });
+
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.department_id) q.set("department_id", String(params.department_id));
+    if (params?.role_type) q.set("role_type", params.role_type);
+    if (params?.risk_level) q.set("risk_level", params.risk_level);
+    if (params?.status) q.set("status", params.status);
+
+    const url = `${API_BASE}/api/export/excel${q.toString() ? `?${q.toString()}` : ""}`;
+    const res = await fetch(url, { headers });
     if (!res.ok) {
       let detail = "เกิดข้อผิดพลาด";
       try { const body = await res.json(); detail = body.detail || detail; } catch {}

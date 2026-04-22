@@ -61,7 +61,13 @@ export default function RopaRecordsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const blob = await exportApi.excel();
+      const blob = await exportApi.excel({
+        search: search || undefined,
+        department_id: filterDept ? Number(filterDept) : undefined,
+        role_type: filterRoleType || undefined,
+        risk_level: filterRisk || undefined,
+        status: filterStatus || undefined,
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
