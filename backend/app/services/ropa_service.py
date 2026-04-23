@@ -226,6 +226,15 @@ def update_ropa_record(db: Session, record_id: int, data: RopaRecordUpdate, user
             # Never approved, resubmitting initial creation
             record.status = "pending_approval"
         # Note: Keep rejection_reason for audit trail visibility
+    elif record.status in ("pending_approval", "pending_edit_approval", "pending_delete_approval"):
+        # Already pending — if it was ever approved, mark as edit approval
+        if record.approved_at is not None:
+            record.status = "pending_edit_approval"
+        # else: keep pending_approval for never-approved records
+
+    # Track who edited and when
+    record.edited_by_id = user.id
+    record.edited_at = datetime.utcnow()
 
     # Update junction tables if provided
     if data.data_subject_category_ids is not None:

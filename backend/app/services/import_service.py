@@ -154,7 +154,7 @@ def _detect_sheet_type(ws: Worksheet) -> str:
     """
     sheet_name = ws.title.lower().strip()
 
-    if "processor" in sheet_name:
+    if "processor" in sheet_name or "ผู้ประมวลผล" in sheet_name:
         return "Processor"
     return "Controller"
 
@@ -167,7 +167,7 @@ def _detect_sheet_kind(ws: Worksheet) -> str:
     """
     sheet_name = ws.title.lower().strip()
 
-    if "processor" in sheet_name:
+    if "processor" in sheet_name or "ผู้ประมวลผล" in sheet_name:
         return "processor"
 
     if "example" in sheet_name or "ตัวอย่าง" in sheet_name:
@@ -395,7 +395,8 @@ def _validate_row(
     processor_email = None
     processor_phone = None
 
-    if role_type == "Controller" and controller_name:
+    # Always try to match controller by name if present
+    if controller_name:
         ctrl = lookups["ctrl_by_name"].get(_normalize_name(controller_name))
         if ctrl:
             controller_id = ctrl.id
@@ -404,7 +405,8 @@ def _validate_row(
             controller_phone = ctrl.phone
         controller_name_stored = controller_name
 
-    elif role_type == "Processor" and processor_name:
+    # Always try to match processor by name if present
+    if processor_name:
         proc = lookups["proc_by_name"].get(_normalize_name(processor_name))
         if proc:
             processor_id = proc.id
@@ -704,13 +706,11 @@ def _get_or_create_controller(db: Session, name: str, address: Optional[str], em
     """Get controller by name or create a new one if it doesn't exist."""
     normalized_name = _normalize_name(name)
     
-    # Try to find existing controller by normalized name
-    existing = db.query(Controller).filter(
-        Controller.name.ilike(f"%{name}%")
-    ).first()
-    
-    if existing:
-        return existing.id
+    # Try to find existing controller by exact normalized name match
+    all_controllers = db.query(Controller).filter(Controller.is_active == True).all()
+    for ctrl in all_controllers:
+        if _normalize_name(ctrl.name) == normalized_name:
+            return ctrl.id
     
     # Create new controller with data from import
     new_controller = Controller(
@@ -740,13 +740,11 @@ def _get_or_create_processor(db: Session, name: str, address: Optional[str], ema
     """Get processor by name or create a new one if it doesn't exist."""
     normalized_name = _normalize_name(name)
     
-    # Try to find existing processor by normalized name
-    existing = db.query(Processor).filter(
-        Processor.name.ilike(f"%{name}%")
-    ).first()
-    
-    if existing:
-        return existing.id
+    # Try to find existing processor by exact normalized name match
+    all_processors = db.query(Processor).filter(Processor.is_active == True).all()
+    for proc in all_processors:
+        if _normalize_name(proc.name) == normalized_name:
+            return proc.id
     
     # Create new processor with data from import
     new_processor = Processor(
@@ -838,12 +836,30 @@ def confirm_import(
         # Use row's department if available, otherwise use default
         dept_id = row.department_id or default_dept_id
         
-        # Handle controller/processor ID assignment with auto-creation if needed
+        # Handle controller/processor ID assignment
         controller_id = row.controller_id
         processor_id = row.processor_id
         
-        # For Controller: if no match was found but we have a name, create new controller
-        if row.role_type == "Controller" and controller_id is None and row.controller_name:
+        # Check if user manually mapped controller/processor via row_mappings
+        if row_mappings:
+            ctrl_key = f"Controller-{row.row_number}"
+            proc_key = f"Processor-{row.row_number}"
+            # Also try with sheet name prefix
+            ctrl_key_sheet = f"{row.sheet_name}-Controller-{row.row_number}"
+            proc_key_sheet = f"{row.sheet_name}-Processor-{row.row_number}"
+            
+            if ctrl_key in row_mappings:
+                controller_id = row_mappings[ctrl_key]
+            elif ctrl_key_sheet in row_mappings:
+                controller_id = row_mappings[ctrl_key_sheet]
+                
+            if proc_key in row_mappings:
+                processor_id = row_mappings[proc_key]
+            elif proc_key_sheet in row_mappings:
+                processor_id = row_mappings[proc_key_sheet]
+        
+        # Auto-create controller if no match was found but we have a name
+        if controller_id is None and row.controller_name:
             controller_id = _get_or_create_controller(
                 db, 
                 row.controller_name, 
@@ -853,8 +869,8 @@ def confirm_import(
                 user_id
             )
         
-        # For Processor: if no match was found but we have a name, create new processor
-        if row.role_type == "Processor" and processor_id is None and row.processor_name:
+        # Auto-create processor if no match was found but we have a name
+        if processor_id is None and row.processor_name:
             processor_id = _get_or_create_processor(
                 db,
                 row.processor_name,
@@ -862,7 +878,7 @@ def confirm_import(
                 row.processor_email,
                 row.processor_phone,
                 user_id,
-                source_controller_id=None  # No specific source controller for imported processors
+                source_controller_id=controller_id  # Link to controller if available
             )
 
         # Check for duplicate after controller/processor is assigned

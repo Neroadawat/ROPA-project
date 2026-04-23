@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -6,6 +6,8 @@ from app.dependencies import require_admin
 from app.models.user import User
 from app.schemas.import_export import ImportBatchResponse, ImportPreviewResponse
 from app.services import import_service
+
+import json
 
 router = APIRouter()
 
@@ -38,6 +40,7 @@ async def import_preview(
 async def import_confirm(
     file: UploadFile = File(...),
     department_id: int = Query(None),
+    row_mappings: str = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
@@ -46,6 +49,7 @@ async def import_confirm(
     Args:
         file: Excel file to import
         department_id: Optional department to assign to imported records (auto-inferred if not provided)
+        row_mappings: Optional JSON string mapping row keys to controller/processor IDs
         db: Database session
         current_user: Current authenticated user (must be admin)
     """
@@ -55,6 +59,19 @@ async def import_confirm(
             detail="รองรับเฉพาะไฟล์ .xlsx",
         )
 
+    # Parse row_mappings from JSON string
+    parsed_mappings = None
+    if row_mappings:
+        try:
+            parsed_mappings = json.loads(row_mappings)
+            # Convert string values to int if needed
+            parsed_mappings = {k: int(v) for k, v in parsed_mappings.items()}
+        except (json.JSONDecodeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="row_mappings ต้องเป็น JSON ที่ถูกต้อง",
+            )
+
     content = await file.read()
     try:
         batch = import_service.confirm_import(
@@ -63,6 +80,7 @@ async def import_confirm(
             file.filename,
             current_user.id,
             target_department_id=department_id,
+            row_mappings=parsed_mappings,
         )
     except ValueError as e:
         raise HTTPException(
