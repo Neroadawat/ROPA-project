@@ -7,25 +7,33 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Loader2, ArrowLeft, AlertTriangle, Clock, Eye } from "lucide-react";
+import { Loader2, ArrowLeft, AlertTriangle, Clock, Eye, CircleAlert, CircleDot } from "lucide-react";
 import { ropaRecordsApi, ApiError, type RetentionAlertData, type RetentionAlertItem } from "@/lib/api";
 
-const URGENCY_CONFIG: Record<string, { label: string; variant: "danger" | "warning" | "info" | "default"; icon: string }> = {
-  overdue: { label: "เกินกำหนด", variant: "danger", icon: "🔴" },
-  within_30: { label: "ภายใน 30 วัน", variant: "warning", icon: "🟠" },
-  within_60_90: { label: "ภายใน 31-90 วัน", variant: "info", icon: "🟡" },
-  review_overdue: { label: "เกินกำหนดทบทวน", variant: "danger", icon: "🔴" },
+const URGENCY_ICON_MAP: Record<string, { className: string; Icon: typeof CircleAlert }> = {
+  danger: { className: "h-4 w-4 text-red-500", Icon: CircleAlert },
+  warning: { className: "h-4 w-4 text-orange-500", Icon: CircleDot },
+  info: { className: "h-4 w-4 text-yellow-500", Icon: CircleDot },
 };
 
-function AlertSection({ title, items = [], variant, icon, onView }: {
-  title: string; items?: RetentionAlertItem[]; variant: "danger" | "warning" | "info" | "default"; icon: string;
+const URGENCY_CONFIG: Record<string, { label: string; variant: "danger" | "warning" | "info" | "default" }> = {
+  overdue: { label: "เกินกำหนด", variant: "danger" },
+  within_30: { label: "ภายใน 30 วัน", variant: "warning" },
+  within_60_90: { label: "ภายใน 31-90 วัน", variant: "info" },
+  review_overdue: { label: "เกินกำหนดทบทวน", variant: "danger" },
+};
+
+function AlertSection({ title, items = [], variant, onView }: {
+  title: string; items?: RetentionAlertItem[]; variant: "danger" | "warning" | "info" | "default";
   onView: (id: number) => void;
 }) {
   if (!items || items.length === 0) return null;
+  const iconCfg = URGENCY_ICON_MAP[variant] ?? URGENCY_ICON_MAP.info;
+  const IconComponent = iconCfg.Icon;
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span>{icon}</span>
+        <IconComponent className={iconCfg.className} />
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <StatusBadge variant={variant}>{items.length} รายการ</StatusBadge>
       </div>
@@ -116,13 +124,13 @@ export default function RetentionAlertsPage() {
 
         {alerts && (
           <>
-            <AlertSection title="เกินกำหนดการเก็บรักษา" items={alerts.overdue} variant="danger" icon="🔴"
+            <AlertSection title="เกินกำหนดการเก็บรักษา" items={alerts.overdue} variant="danger"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
-            <AlertSection title="เกินกำหนดทบทวน" items={alerts.review_overdue} variant="danger" icon="🔴"
+            <AlertSection title="เกินกำหนดทบทวน" items={alerts.review_overdue} variant="danger"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
-            <AlertSection title="หมดอายุภายใน 30 วัน" items={alerts.within_30} variant="warning" icon="🟠"
+            <AlertSection title="หมดอายุภายใน 30 วัน" items={alerts.within_30} variant="warning"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
-            <AlertSection title="หมดอายุภายใน 31-90 วัน" items={alerts.within_60_90} variant="info" icon="🟡"
+            <AlertSection title="หมดอายุภายใน 31-90 วัน" items={alerts.within_60_90} variant="info"
               onView={(id) => router.push(`/ropa-records/${id}`)} />
           </>
         )}

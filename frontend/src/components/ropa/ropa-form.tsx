@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, ClipboardList, Lightbulb } from "lucide-react";
 import {
   departmentsApi, controllersApi, processorsApi, masterDataApi, suggestionsApi,
   ApiError,
@@ -191,7 +191,7 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
       {form.rejection_reason && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-red-400">📋 ได้รับการปฏิเสธ</p>
+            <p className="text-sm font-semibold text-red-400"><ClipboardList className="h-4 w-4 inline-block mr-1.5 -mt-0.5 text-red-400" />ได้รับการปฏิเสธ</p>
             <p className="text-sm text-red-300">{form.rejection_reason}</p>
           </div>
         </div>
@@ -429,7 +429,7 @@ export function RopaForm({ form, setForm, isEdit, readOnly, isSubmitting, userRo
             <>
               {recordStatus === "rejected" && (
                 <div className="p-3 rounded-lg bg-red-950/30 border border-red-500/30">
-                  <p className="text-sm text-red-300 mb-2">💡 แนะนำ: เนื่องจากบันทึกนี้ถูกปฏิเสธแล้ว กรุณาระบุว่า:</p>
+                  <p className="text-sm text-red-300 mb-2"><Lightbulb className="h-4 w-4 inline-block mr-1.5 -mt-0.5 text-amber-400" />แนะนำ: เนื่องจากบันทึกนี้ถูกปฏิเสธแล้ว กรุณาระบุว่า:</p>
                   <ul className="text-xs text-red-200/80 space-y-1 ml-2">
                     <li>• ถ้าเป็นการสร้างใหม่: "แก้การสร้างบันทึกครั้งที่ X"</li>
                     <li>• ถ้าเป็นการแก้ไข: "แก้ไข [อธิบายการเปลี่ยนแปลง]"</li>
