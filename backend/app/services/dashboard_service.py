@@ -242,12 +242,27 @@ def get_status_overview(db: Session, user: User) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_sensitive_data_mapping(db: Session, user: User) -> dict:
-    """Departments with most sensitive data."""
+    """Departments with most sensitive data.
+
+    Returns ALL departments that have ROPA records (even those with 0
+    sensitive data types) so the chart always shows a complete picture.
+    """
     base = _dept_scope(_active_records(db), user)
 
     # Build a subquery of active record IDs to avoid ambiguous joins
     active_ids = base.with_entities(RopaRecord.id).subquery()
 
+    # All departments that own at least one active ROPA record
+    all_depts = (
+        db.query(Department.name)
+        .join(RopaRecord, RopaRecord.department_id == Department.id)
+        .filter(RopaRecord.id.in_(db.query(active_ids)))
+        .distinct()
+        .all()
+    )
+    dept_counts: dict[str, int] = {name: 0 for (name,) in all_depts}
+
+    # Count sensitive data per department
     rows = (
         db.query(
             Department.name.label("department"),
@@ -260,11 +275,17 @@ def get_sensitive_data_mapping(db: Session, user: User) -> dict:
         .join(PersonalDataType, RopaPersonalDataType.personal_data_type_id == PersonalDataType.id)
         .filter(PersonalDataType.sensitivity_level == "sensitive")
         .group_by(Department.name)
-        .order_by(func.count(RopaPersonalDataType.personal_data_type_id).desc())
         .all()
     )
 
-    mapping = [{"department": dept, "sensitive_data_count": cnt} for dept, cnt in rows]
+    for dept, cnt in rows:
+        dept_counts[dept] = cnt
+
+    # Sort descending by count, then alphabetically
+    mapping = sorted(
+        [{"department": dept, "sensitive_data_count": cnt} for dept, cnt in dept_counts.items()],
+        key=lambda x: (-x["sensitive_data_count"], x["department"]),
+    )
     return {"mapping": mapping}
 
 

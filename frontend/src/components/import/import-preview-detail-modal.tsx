@@ -29,7 +29,7 @@ export function ImportPreviewDetailModal({
   }) => (
     <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
       <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-        {Icon && <Icon className="h-4 w-4" />}
+        {Icon && <Icon className="h-4 w-4 text-primary" />}
         {title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{children}</div>

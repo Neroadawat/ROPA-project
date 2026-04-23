@@ -180,7 +180,7 @@ export default function RopaRecordDetailPage() {
       <div className="p-6 max-w-4xl">
         {record.rejection_reason && (
           <div className="mb-4 rounded-xl border border-red-500/30 bg-red-950/20 p-4">
-            <p className="text-sm font-semibold text-red-400 mb-2"><AlertTriangle className="h-4 w-4 inline-block mr-1.5 -mt-0.5" />เหตุผลการปฏิเสธ</p>
+            <p className="text-sm font-semibold text-red-400 mb-2"><AlertTriangle className="h-4 w-4 inline-block mr-1.5 -mt-0.5 text-red-400" />เหตุผลการปฏิเสธ</p>
             <p className="text-sm text-red-200">{record.rejection_reason}</p>
             {record.rejected_by && record.rejected_at && (
               <p className="text-xs text-red-300/70 mt-2">
