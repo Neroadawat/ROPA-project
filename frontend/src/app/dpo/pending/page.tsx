@@ -9,7 +9,7 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, Loader2, Ban, Pencil } from "lucide-react";
 import { ropaRecordsApi, ApiError, type RopaRecordListItem } from "@/lib/api";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -119,7 +119,7 @@ export default function DpoPendingPage() {
           <div className="text-xs space-y-3">
             {hasRejection && (
               <div>
-                <span className="text-red-400 font-medium block mb-1">⛔ ปฏิเสธ:</span>
+                <span className="text-red-400 font-medium block mb-1"><Ban className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />ปฏิเสธ:</span>
                 <p className="text-muted-foreground">{item.rejection_reason}</p>
                 {item.rejected_by && item.rejected_at && (
                   <p className="text-xs text-muted-foreground/70 mt-1">
@@ -131,7 +131,7 @@ export default function DpoPendingPage() {
             
             {hasEdit && (
               <div>
-                <span className="text-blue-400 font-medium block mb-1">✏️  แก้ไข:</span>
+                <span className="text-blue-400 font-medium block mb-1"><Pencil className="h-3.5 w-3.5 inline-block mr-1 -mt-0.5" />แก้ไข:</span>
                 <p className="text-muted-foreground">{item.edit_reason}</p>
                 {item.edited_by && item.edited_at && (
                   <p className="text-xs text-muted-foreground/70 mt-1">
