@@ -64,7 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Audit Logs", href: "/audit-logs", icon: ClipboardList, roles: ["Admin"] },
       { label: "User Sessions", href: "/user-logs", icon: Clock, roles: ["Admin"] },
-      { label: "AI Suggestion Logs", href: "/ai/suggestion-logs", icon: Bot, roles: ["Admin"] },
+      { label: "Suggestion Logs", href: "/ai/suggestion-logs", icon: Bot, roles: ["Admin"] },
     ],
   },
 ];
