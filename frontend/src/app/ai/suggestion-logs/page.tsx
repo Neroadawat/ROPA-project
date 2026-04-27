@@ -55,7 +55,7 @@ export default function SuggestionLogsPage() {
 
   return (
     <DashboardLayout>
-      <Header title="AI Suggestion Logs" description="บันทึกการแนะนำฐานกฎหมายจากระบบ AI" />
+      <Header title="Suggestion Logs" description="บันทึกการแนะนำฐานกฎหมาย" />
       <div className="p-6">
         <DataTable
           columns={columns}
