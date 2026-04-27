@@ -50,7 +50,6 @@ export default function UserLogsPage() {
     { key: "user_id", label: "ผู้ใช้", sortable: true, render: (item) => { const u = getUser(item.user_id); return (<div><p className="font-medium text-foreground text-sm">{u?.name ?? `User #${item.user_id}`}</p><p className="text-xs text-muted-foreground">{u?.email ?? ""}</p></div>); } },
     { key: "user_role", label: "บทบาท", render: (item) => { const u = getUser(item.user_id); const b = u ? ROLE_BADGE[u.role] : null; return b ? <StatusBadge variant={b.variant}>{b.label}</StatusBadge> : "-"; } },
     { key: "action", label: "การดำเนินการ", sortable: true, render: (item) => <StatusBadge variant={item.action === "login" ? "success" : "default"} dot>{item.action === "login" ? "เข้าสู่ระบบ" : "ออกจากระบบ"}</StatusBadge> },
-    { key: "ip_address", label: "IP Address", render: (item) => <span className="text-xs font-mono text-muted-foreground">{item.ip_address || "-"}</span> },
   ];
 
   if (loading) {
